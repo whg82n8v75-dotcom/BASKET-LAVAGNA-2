@@ -167,7 +167,7 @@ export function drawDrawing(ctx, view, d, R, selected) {
   ctx.restore();
 }
 
-function drawPlayer(ctx, view, p, pos, R, { selected, holder, ghost, locked }) {
+function drawPlayer(ctx, view, p, pos, R, { selected, holder, ghost, locked, mismatch }) {
   const s = view.toS(pos);
   ctx.save();
   if (ghost) {
@@ -223,6 +223,21 @@ function drawPlayer(ctx, view, p, pos, R, { selected, holder, ghost, locked }) {
     ctx.fill();
     ctx.fillStyle = "#F8FAFC";
     ctx.fillText(p.name, s.x, s.y + R + 3 + th / 2 + 1);
+  }
+  if (mismatch) {
+    const mx = s.x - R * 0.8, my = s.y - R * 0.8, r = Math.max(6, R * 0.42);
+    ctx.fillStyle = mismatch === "size" ? "#DC2626" : "#F97316";
+    ctx.beginPath();
+    ctx.moveTo(mx, my - r);
+    ctx.lineTo(mx + r, my + r * 0.8);
+    ctx.lineTo(mx - r, my + r * 0.8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = `900 ${Math.round(r * 1.3)}px "Barlow Condensed", sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("!", mx, my + r * 0.2);
   }
   if (locked) {
     const lx = s.x + R * 0.78, ly = s.y - R * 0.78, r = Math.max(6, R * 0.42);
@@ -281,7 +296,7 @@ function drawBall(ctx, view, ball, R) {
 export const isVisible = (play, p) => !(play.hidden || {})[p.team];
 
 export function drawScene(ctx, view, play, scene, opts = {}) {
-  const { selectedId, selectedDrawingId, draft, ghost, size = 1, title, locked } = opts;
+  const { selectedId, selectedDrawingId, draft, ghost, size = 1, title, locked, mismatch } = opts;
   const R = playerRadius(view, size);
   ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
   ctx.drawImage(courtImage(view), 0, 0, view.w, view.h);
@@ -321,7 +336,7 @@ export function drawScene(ctx, view, play, scene, opts = {}) {
   const holder = scene.ball?.holder;
   play.players.forEach((p) => {
     const pos = scene.positions[p.id];
-    if (pos && isVisible(play, p)) drawPlayer(ctx, view, p, pos, R, { selected: p.id === selectedId, holder: holder === p.id && !play.hidden?.ball, locked: locked?.[p.id] });
+    if (pos && isVisible(play, p)) drawPlayer(ctx, view, p, pos, R, { selected: p.id === selectedId, holder: holder === p.id && !play.hidden?.ball, locked: locked?.[p.id], mismatch: mismatch?.[p.id] });
   });
   if (scene.ball && !play.hidden?.ball) drawBall(ctx, view, scene.ball, R);
   if (title) {

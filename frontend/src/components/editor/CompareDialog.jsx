@@ -1,5 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { Play, Pause, RotateCcw } from "lucide-react";
+import { Play, Pause, RotateCcw, Video, Download, Loader2 } from "lucide-react";
+import { recordCompare, pickMime } from "@/lib/recorder";
+import { shareOrDownload, safeName } from "@/lib/storage";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { makeView } from "@/lib/court";
 import { drawScene } from "@/lib/render";
@@ -35,7 +37,7 @@ const Pane = forwardRef(function Pane({ play, testid }, ref) {
       c.height = Math.round(view.h * view.dpr);
     }
     const fr = frameAt(play, tl, Math.min(T, tl.total - 1e-4), true);
-    drawScene(c.getContext("2d"), view, play, fr, { size: 0.9 });
+    drawScene(c.getContext("2d"), view, play, fr, { size: 0.9, mismatch: Object.fromEntries((play.phases[fr.phaseIndex]?.defInfo?.mismatches || []).map((m) => [m.d, m.kind])) });
     if (fr.phaseIndex !== phase) setPhase(fr.phaseIndex);
   };
   useImperativeHandle(ref, () => ({ draw, total: tl.total }));
@@ -58,6 +60,19 @@ export function CompareDialog({ open, onOpenChange, play }) {
   const [a, setA] = useState("man:switch");
   const [b, setB] = useState("man:over");
   const [playing, setPlaying] = useState(false);
+  const [rec, setRec] = useState({ status: "idle", progress: 0, result: null });
+  const abortRef = useRef(null);
+  const exportVideo = async () => {
+    setPlaying(false);
+    abortRef.current = new AbortController();
+    setRec({ status: "recording", progress: 0, result: null });
+    try {
+      const result = await recordCompare(pa, pb, [OPTIONS[a], OPTIONS[b]], { onProgress: (p) => setRec((r) => ({ ...r, progress: Math.round(p * 100) })), signal: abortRef.current.signal });
+      setRec({ status: "done", progress: 100, result });
+    } catch (e) {
+      setRec({ status: e.message === "aborted" ? "idle" : "error", progress: 0, result: null });
+    }
+  };
   const pa = useMemo(() => (open ? variant(play, a) : null), [open, play, a]);
   const pb = useMemo(() => (open ? variant(play, b) : null), [open, play, b]);
   const ra = useRef(null), rb = useRef(null), tRef = useRef(0);
@@ -82,6 +97,8 @@ export function CompareDialog({ open, onOpenChange, play }) {
   useEffect(() => {
     tRef.current = 0;
     setPlaying(false);
+    abortRef.current?.abort();
+    setRec({ status: "idle", progress: 0, result: null });
   }, [a, b, open]);
   const sel = (v, set, id) => (
     <select data-testid={id} value={v} onChange={(e) => set(e.target.value)} className="h-10 rounded-lg bg-[#0B111C] border border-[#1E293B] px-2 text-sm min-w-0 w-full sm:w-auto sm:flex-1">
@@ -101,6 +118,14 @@ export function CompareDialog({ open, onOpenChange, play }) {
           {sel(b, setB, "compare-select-b")}
           <button data-testid="compare-restart" onClick={() => { tRef.current = 0; ra.current?.draw(0); rb.current?.draw(0); }} className="w-10 h-10 grid place-items-center rounded-full hover:bg-[#1A263D]"><RotateCcw className="w-4 h-4" /></button>
           <button data-testid="compare-play" onClick={() => { if (!playing && tRef.current >= Math.max(ra.current?.total || 0, rb.current?.total || 0)) tRef.current = 0; setPlaying((p) => !p); }} className="w-11 h-11 grid place-items-center rounded-full bg-amber-500 text-[#090D14]">{playing ? <Pause className="w-5 h-5" fill="currentColor" /> : <Play className="w-5 h-5 ml-0.5" fill="currentColor" />}</button>
+          {rec.status === "done" ? (
+            <button data-testid="compare-video-save" onClick={() => shareOrDownload(rec.result.blob, `${safeName(play.name)}-confronto.${rec.result.ext}`)} className="h-10 px-4 rounded-full bg-emerald-500 text-[#090D14] font-semibold flex items-center gap-1.5 text-sm"><Download className="w-4 h-4" />Salva video ({rec.result.ext.toUpperCase()})</button>
+          ) : (
+            <button data-testid="compare-video-export" disabled={!pickMime() || rec.status === "recording"} onClick={exportVideo} className="h-10 px-4 rounded-full bg-red-500 text-white font-semibold flex items-center gap-1.5 text-sm disabled:opacity-50">
+              {rec.status === "recording" ? <><Loader2 className="w-4 h-4 animate-spin" />Registrazione {rec.progress}%</> : <><Video className="w-4 h-4" />Esporta video confronto</>}
+            </button>
+          )}
+          {rec.status === "error" && <span data-testid="compare-video-error" className="text-xs text-red-400">Registrazione non supportata da questo browser</span>}
         </div>
         {pa && pb && (
           <div className="flex-1 min-h-0 flex flex-col landscape:flex-row gap-3">

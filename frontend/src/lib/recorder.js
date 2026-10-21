@@ -101,3 +101,72 @@ export async function framesSheetPNG(play, size = 1) {
   cell.remove();
   return b;
 }
+
+const mmOf = (play, i) => Object.fromEntries((play.phases[i]?.defInfo?.mismatches || []).map((m) => [m.d, m.kind]));
+
+export function recordCompare(pa, pb, labels, { speed = 1, onProgress, signal }) {
+  return new Promise((resolve, reject) => {
+    const mime = pickMime();
+    const full = pa.courtMode === "full";
+    const pw = full ? 940 : 860, ph = full ? 540 : 790, head = 70, foot = 46, gap = 20;
+    const W = pw * 2 + gap * 3, H = head + ph + foot + gap;
+    const canvas = makeCanvas(W, H);
+    if (!mime || !canvas.captureStream) {
+      canvas.remove();
+      reject(new Error("unsupported"));
+      return;
+    }
+    const panes = [pa, pb].map((p) => ({ p, c: makeCanvas(pw, ph), view: makeView(pw, ph, p.courtMode, 1), tl: buildTimeline(p) }));
+    const total = Math.max(...panes.map((x) => x.tl.total));
+    const ctx = canvas.getContext("2d");
+    const draw = (T) => {
+      ctx.fillStyle = "#090D14";
+      ctx.fillRect(0, 0, W, H);
+      ctx.textBaseline = "middle";
+      panes.forEach((x, k) => {
+        const fr = frameAt(x.p, x.tl, Math.min(T, x.tl.total - 0.001), true);
+        drawScene(x.c.getContext("2d"), x.view, x.p, fr, { size: 1.05, mismatch: mmOf(x.p, fr.phaseIndex) });
+        const left = gap + k * (pw + gap);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.fillStyle = k ? "#38BDF8" : "#F59E0B";
+        ctx.fillRect(left, 18, 6, 34);
+        ctx.fillStyle = "#F8FAFC";
+        ctx.font = '800 30px "Barlow Condensed", sans-serif';
+        ctx.textAlign = "left";
+        ctx.fillText(`${k ? "B" : "A"} · ${labels[k]}`.toUpperCase(), left + 16, 36);
+        ctx.drawImage(x.c, left, head, pw, ph);
+        const info = x.p.phases[fr.phaseIndex]?.defInfo;
+        ctx.font = '600 17px "Plus Jakarta Sans", sans-serif';
+        ctx.fillStyle = "#CBD5E1";
+        const note = info?.notes?.find((n) => /Cambio|sopra|sotto|drop|Show|Aiuto|Mismatch|zona/.test(n)) || info?.notes?.[0] || "";
+        ctx.fillText(`Fase ${fr.phaseIndex + 1}: ${note}`.slice(0, 92), left, head + ph + foot / 2 + 4);
+      });
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#94A3B8";
+      ctx.font = '700 22px "Barlow Condensed", sans-serif';
+      ctx.fillText(pa.name.toUpperCase(), W - gap, 36);
+    };
+    draw(0);
+    const stream = canvas.captureStream(30);
+    const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 7_000_000 });
+    const chunks = [];
+    rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+    rec.onstop = () => {
+      canvas.remove();
+      panes.forEach((x) => x.c.remove());
+      stream.getTracks().forEach((t) => t.stop());
+      if (signal?.aborted) return reject(new Error("aborted"));
+      resolve({ blob: new Blob(chunks, { type: mime.split(";")[0] }), ext: mime.includes("mp4") ? "mp4" : "webm" });
+    };
+    rec.start(200);
+    const t0 = performance.now(), end = total + 0.8;
+    const loop = (now) => {
+      const T = ((now - t0) / 1000) * speed;
+      draw(Math.min(T, total - 0.001));
+      onProgress?.(Math.min(1, T / end));
+      if (signal?.aborted || T >= end) rec.stop();
+      else requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+  });
+}

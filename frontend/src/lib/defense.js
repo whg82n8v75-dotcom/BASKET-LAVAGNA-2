@@ -197,20 +197,25 @@ function manPhase(ctx) {
     else normal[d] = manOff(A, ballN, info, prm, ev.cuts.has(man));
   });
   Object.assign(out, normal);
-  const pickStrat = (dS, dT) => {
+  const pickStrat = (dS, dT, sc) => {
+    const tol = cfg.switchTol ?? 1;
+    const z = (id) => sizeOf(play.players.find((x) => x.id === id));
+    const lab = (id) => `${short(play, id)} (${SIZES[z(id)].toLowerCase()})`;
+    const pairs = [[dS, sc.T], [dT, sc.S]];
+    const bad = pairs.filter(([d, o]) => Math.abs(RANK[z(o)] - RANK[z(d)]) > tol);
+    const small = pairs.filter(([d, o]) => RANK[z(o)] - RANK[z(d)] > tol);
+    if (cfg.strategy === "switch" && small.length) small.forEach(([d, o]) => notes.push(`⚠ Mismatch dopo il cambio: ${lab(d)} su ${lab(o)}`));
     if (cfg.strategy !== "selective") return cfg.strategy;
-    const pS = play.players.find((x) => x.id === dS), pT = play.players.find((x) => x.id === dT);
-    const zS = sizeOf(pS), zT = sizeOf(pT);
-    const ok = Math.abs(RANK[zS] - RANK[zT]) <= (cfg.switchTol ?? 1);
     const alt = cfg.mismatch || "over";
-    notes.push(`Cambio selettivo: ${short(play, dS)} (${SIZES[zS].toLowerCase()}) e ${short(play, dT)} (${SIZES[zT].toLowerCase()}) ${ok ? "hanno taglie compatibili → cambio" : `troppo diversi → ${STRATEGIES[alt].toLowerCase()}`}`);
+    const ok = !bad.length;
+    notes.push(ok ? `Cambio selettivo: ${lab(dS)} su ${lab(sc.T)} e ${lab(dT)} su ${lab(sc.S)} → taglie compatibili, cambio` : `Cambio selettivo: il cambio lascerebbe ${bad.map(([d, o]) => `${lab(d)} su ${lab(o)}`).join(" e ")} → niente cambio, ${STRATEGIES[alt].toLowerCase()}`);
     return ok ? "switch" : alt;
   };
   const help = { helpers: [] };
   ev.screensSet.forEach((sc) => {
     const dS = defs.find((x) => state.assign[x] === sc.S), dT = defs.find((x) => state.assign[x] === sc.T);
     if (!dS || !dT) return;
-    const strat = pickStrat(dS, dT);
+    const strat = pickStrat(dS, dT, sc);
     const S = nPos(sc.S), T = nPos(sc.T);
     notes.push(`Blocco di ${short(play, sc.S)} per ${short(play, sc.T)}${sc.ball ? " (sulla palla)" : ""}: ${STRATEGIES[strat]}`);
     if (!sc.ball) return;
@@ -226,7 +231,7 @@ function manPhase(ctx) {
   ev.screensUse.forEach((sc) => {
     const dS = defs.find((x) => state.assign[x] === sc.S), dT = defs.find((x) => state.assign[x] === sc.T);
     if (!dS || !dT || !ph.positions[sc.S]) return;
-    const strat = pickStrat(dS, dT);
+    const strat = pickStrat(dS, dT, sc);
     const T = nPos(sc.T), S = nPos(sc.S), spot = sc.spot;
     const trail = add(T, mul(norm(sub(spot, T)), 1.0));
     const under = toward(T, HOOP, 2.2);
@@ -488,6 +493,16 @@ function runEngine(play, cfg, upto = play.phases.length - 1, sticky = null) {
       Object.entries(roles).forEach(([d, r]) => notes.push(`${short(play, d)}: ${ROLE_LABELS[cfg.mode][r]}`));
     }
     separate(outN, cfg.mode === "man" ? 1.0 : 1.4);
+    const mismatches = [];
+    if (cfg.mode === "man")
+      Object.entries(state.assign).forEach(([d, o]) => {
+        const pd = play.players.find((x) => x.id === d), po = play.players.find((x) => x.id === o);
+        if (!ph.positions[d] || !ph.positions[o]) return;
+        const diff = RANK[sizeOf(po)] - RANK[sizeOf(pd)];
+        if (Math.abs(diff) <= (cfg.switchTol ?? 1)) return;
+        mismatches.push({ d, o, kind: diff > 0 ? "size" : "speed" });
+        notes.push(diff > 0 ? `⚠ Mismatch fisico: ${short(play, d)} (${SIZES[sizeOf(pd)].toLowerCase()}) marca ${short(play, o)} (${SIZES[sizeOf(po)].toLowerCase()})` : `Mismatch di velocità: ${short(play, d)} (${SIZES[sizeOf(pd)].toLowerCase()}) marca ${short(play, o)} (${SIZES[sizeOf(po)].toLowerCase()})`);
+      });
     const offPts = offs.filter((o) => ph.positions[o.id]).map((o) => fr.toN(ph.positions[o.id]));
     Object.keys(outN).forEach((d) => {
       offPts.forEach((o) => {
@@ -499,7 +514,7 @@ function runEngine(play, cfg, upto = play.phases.length - 1, sticky = null) {
     state.prevScreens = ev.screensSet;
     const gen = {};
     Object.entries(outN).forEach(([d, n]) => (gen[d] = fr.fromN(n)));
-    const defInfo = { zone: info.zone, side: info.side, events: evNotes, notes, helpers, mode: cfg.mode, label: `${ZONE_LABELS[info.zone]}${info.side ? ` · lato forte ${sideLabel(info.side)}` : ""}` };
+    const defInfo = { zone: info.zone, side: info.side, events: evNotes, notes, helpers, mismatches, mode: cfg.mode, label: `${ZONE_LABELS[info.zone]}${info.side ? ` · lato forte ${sideLabel(info.side)}` : ""}` };
     results.push({ gen, defInfo });
   }
   return { results, prm, defsP };
