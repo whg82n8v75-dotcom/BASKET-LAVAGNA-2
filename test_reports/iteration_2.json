@@ -1,0 +1,31 @@
+{
+  "summary": "Frontend-only testing of the deterministic defensive engine (iteration 2). All requested items PASS: iPhone toolbar regression fixed; library has 16 originals + 13 test presets; defense-reading-chip updates per phase; Difesa panel (modes, strategies only in man mode, assignments, 9 sliders, arrows switch, generate, Fase N reading with events/notes) works; positions verified via localStorage; zone2-3 -> 3-2 regeneration changes positions + defInfo.mode; pressure param changes on-ball distance; PnR switch/show notes correct; manual edit protection dialog (keep/copy/overwrite/cancel) works incl. fresh new play; playback, linked arrow phase creation, undo/redo, reload persistence OK. One gap found: defender edits in phases added AFTER a generation get overwritten without asking.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Manual edit protection", "issue": "If a play already has a generated defense and the user adds a new phase (phase-add or a linked arrow) and then places a defender by hand in that new phase, pressing Genera difesa overwrites it WITHOUT the confirm dialog. Cause: newPhaseFrom() (model.js) creates the phase without defGen, manualEdits() (defense.js L487) skips phases that have no defGen, and hasGenerated() is already true, so onGenerate goes straight to overwrite. Repro: open test-man-wing copy -> phase-chip-1 -> phase-add -> drag d1 -> defense-generate-btn -> no dialog, d1 moved from (9.60,6.44) to (8.05,7.99).", "affected_selectors": ["defense-generate-btn", "generate-confirm-dialog", "phase-add"]}
+    ],
+    "design_issues": [
+      {"screen": "DefensePanel assignments", "issues": ["Dev console warning 'span cannot be a child of option' coming from the `{o.name ? ...}` JSX expression inside <option> (emergent visual-edit wrapper). Use one template string for the option text, e.g. {`marca A${o.number}${o.name ? ' ' + o.name : ''}`}, to get rid of it."]}
+    ]
+  },
+  "test_report_links": ["/app/tests/helpers.js"],
+  "action_items": [
+    "MEDIUM: Treat defender positions in phases without defGen (added after a generation) as manual edits when they differ from the previous phase, OR copy defGen into new phases created by newPhaseFrom/insertPhaseAfter/addDrawing. Either way the confirm dialog should show, and 'keep' should keep them",
+    "LOW: In DefensePanel, make the <option> text a single string so the 'span inside option' console warning goes away"
+  ],
+  "critical_code_review_comments": [
+    "manualEdits() only looks at phases that have defGen, so it misses phases added after generation (see integration issue)",
+    "duplicatePhase copies defGen/defInfo via ...src. That is correct for edit detection, but the duplicated phase shows a defInfo reading that may be stale until you regenerate",
+    "The 'copy' choice regenerates from the current play with no keep-set, so manual edits are dropped in the copy (the original is untouched). This is acceptable, but the dialog label could say so",
+    "frameAt defender timing: delay = 0.35*reaction and span = (1-delay)*(1-0.4*rotSpeed). Defenders always finish inside the segment (u<=1). OK"
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend only)", "frontend": "97% (1 edge-case gap)"},
+  "test_credentials": "none required",
+  "seed_data_creation": "Copies of test presets and a 'TEST_def' new play were created in browser localStorage only (ephemeral browser contexts)",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Values verified: test-z23-wing phase 2 has d2 (5.76,11.48) about 1.48 from o3 (6.6,12.7), d1 y=8.2 (middle), d3 (2,6) about 1.56 from the rim. Switching to zone32 changes all 5 positions and sets defInfo.mode to zone32. On test-man-wing phase 2 in man mode, the on-ball d3 distance is 2.17 at pressure min, 1.48 at default and 1.03 at max. pnr-switch F3 note 'Cambio: D5 prende la palla, D1 anticipa il rollante'; F4 d1 is 0.69 from o5. pnr-show F3 note 'Show di D5...'. Slider keyboard (focus [role=slider] + End/Home) works. Drag defenders with window.__sp from /app/tests/helpers.js. The iPhone toolbar is now scrollable (clientWidth 390, scrollWidth 624) and all 4 tools are reachable and can be activated. Retest the new-phase manual-edit case after the fix."
+}

@@ -393,7 +393,7 @@ function Editor({ play }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Generare la difesa?</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-400">
-              {genAsk?.edits ? `Hai modificato a mano i difensori in ${genAsk.edits} fase/i dopo l'ultima generazione.` : "Le posizioni attuali dei difensori in tutte le fasi verranno sostituite."} Scegli come procedere.
+              {genAsk?.edits ? `Ci sono difensori posizionati a mano (o fasi nuove non ancora generate) in ${genAsk.edits} fase/i.` : "Le posizioni attuali dei difensori in tutte le fasi verranno sostituite."} Scegli come procedere.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="grid gap-2">

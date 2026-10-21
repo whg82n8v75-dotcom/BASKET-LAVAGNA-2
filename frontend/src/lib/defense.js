@@ -486,8 +486,13 @@ export function generateDefense(play, cfg = DEFAULT_DEFENSE, { keep = {} } = {})
 
 export function manualEdits(play) {
   const out = {};
+  const any = play.phases.some((ph) => ph.defGen);
+  const defIds = play.players.filter((p) => p.team === "D").map((p) => p.id);
   play.phases.forEach((ph, k) => {
-    if (!ph.defGen) return;
+    if (!ph.defGen) {
+      if (any && defIds.some((d) => ph.positions[d])) out[k] = defIds.filter((d) => ph.positions[d]);
+      return;
+    }
     const ids = Object.keys(ph.defGen).filter((d) => ph.positions[d] && Math.hypot(ph.positions[d].x - ph.defGen[d].x, ph.positions[d].y - ph.defGen[d].y) > 0.05);
     if (ids.length) out[k] = ids;
   });

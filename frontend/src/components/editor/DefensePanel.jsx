@@ -56,7 +56,7 @@ export function DefensePanel({ open, onOpenChange, play, phaseIndex, onConfig, o
                   <label key={d.id} className="flex items-center gap-2 text-xs">
                     <span className="w-7 h-7 rounded-full grid place-items-center font-heading font-bold text-white shrink-0" style={{ background: d.color }}>{d.number}</span>
                     <select data-testid={`defense-assign-${d.id}`} value={cfg.assign?.[d.id] || offs.find((o) => o.number === d.number)?.id || ""} onChange={(e) => set({ assign: { ...cfg.assign, [d.id]: e.target.value } })} className="flex-1 h-9 rounded-lg bg-[#0B111C] border border-[#1E293B] px-2 text-sm">
-                      {offs.map((o) => <option key={o.id} value={o.id}>marca A{o.number}{o.name ? ` ${o.name}` : ""}</option>)}
+                      {offs.map((o) => <option key={o.id} value={o.id}>{`marca A${o.number}${o.name ? " " + o.name : ""}`}</option>)}
                     </select>
                   </label>
                 ))}
