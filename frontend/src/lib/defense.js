@@ -467,6 +467,13 @@ function runEngine(play, cfg, upto = play.phases.length - 1, sticky = null) {
       Object.entries(roles).forEach(([d, r]) => notes.push(`${short(play, d)}: ${ROLE_LABELS[cfg.mode][r]}`));
     }
     separate(outN, cfg.mode === "man" ? 1.0 : 1.4);
+    const offPts = offs.filter((o) => ph.positions[o.id]).map((o) => fr.toN(ph.positions[o.id]));
+    Object.keys(outN).forEach((d) => {
+      offPts.forEach((o) => {
+        const v = sub(outN[d], o);
+        if (len(v) < 0.8) outN[d] = add(o, mul(len(v) > 0.01 ? norm(v) : norm(sub(HOOP, o)), 0.8));
+      });
+    });
     state.prevPos = outN;
     state.prevScreens = ev.screensSet;
     const gen = {};

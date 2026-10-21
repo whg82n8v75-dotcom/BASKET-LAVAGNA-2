@@ -342,7 +342,7 @@ function Editor({ play }) {
           exitPlayback();
           const p = { ...playRef.current, defense: { ...cfgOf(playRef.current), live: on } };
           commit(on ? react({ ...p, hidden: { ...(p.hidden || {}), D: false } }) : p);
-          toast(on ? "Costruzione tattica live attiva: sposta attacco e palla, la difesa reagisce" : "Reazioni automatiche disattivate: gestione manuale", { duration: 2200 });
+          toast(on ? "Costruzione tattica live attiva: sposta attacco e palla, la difesa reagisce" : "Reazioni automatiche disattivate: gestione manuale", { duration: 1400 });
         }}
         onMode={(mode) => commit(react({ ...playRef.current, defense: { ...cfgOf(playRef.current), mode } }))}
         onReset={() => {

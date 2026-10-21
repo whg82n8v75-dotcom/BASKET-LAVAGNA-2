@@ -23,7 +23,7 @@ export function LiveBar({ play, phaseIndex, onToggle, onMode, onReset, onUnlockA
       {on && (
         <>
           <button data-testid="live-reset-btn" onClick={onReset} title="Ripristina posizioni difensive generate" className="h-8 px-2.5 rounded-full text-xs font-semibold border border-[#334155] flex items-center gap-1 shrink-0 hover:bg-[#1A263D]"><RotateCcw className="w-3.5 h-3.5" /><span className="hidden sm:inline">Ripristina</span></button>
-          {locks > 0 && <button data-testid="live-unlock-all-btn" onClick={onUnlockAll} className="h-8 px-2.5 rounded-full text-xs font-semibold border border-amber-600/60 text-amber-300 flex items-center gap-1 shrink-0"><Unlock className="w-3.5 h-3.5" />{locks} bloccati</button>}
+          {locks > 0 && <button data-testid="live-unlock-all-btn" onClick={onUnlockAll} className="h-8 px-2.5 rounded-full text-xs font-semibold border border-amber-600/60 text-amber-300 flex items-center gap-1 shrink-0"><Unlock className="w-3.5 h-3.5" />{locks} {locks === 1 ? "bloccato" : "bloccati"}</button>}
           <button data-testid="live-confirm-phase-btn" onClick={onConfirm} title="Registra la fase e crea la successiva" className="h-8 px-2.5 rounded-full text-xs font-semibold bg-emerald-600 text-white flex items-center gap-1 shrink-0"><CheckCheck className="w-3.5 h-3.5" />Conferma fase</button>
         </>
       )}

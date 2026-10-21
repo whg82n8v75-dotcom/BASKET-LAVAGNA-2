@@ -1,0 +1,31 @@
+{
+  "summary": "Iteration 3, frontend only: tested the new 'Costruzione tattica live' mode on desktop 1920x1080 and iPhone 390x844 with Playwright, checking positions in localStorage. Every requested item passed. Checked: LiveBar controls and when they show; zone 2-3 at the point, wing and corner; zone 3-2 corner rotation; man-to-man off-ball follow and paint drive with a helper; recompute during the drag; smooth glide; lock, unlock, reset and unlock-all; Conferma fase / phase-add / linked pass arrow phases get live defense; Fase 1 stays the same when Fase 2 is edited; playback; live OFF goes back to manual; undo/redo; reload keeps live, mode and locks; mobile bar scrolls; Genera difesa still works. No console errors. Only cosmetic notes.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "LiveBar", "issues": ["Unlock-all label reads '1 bloccati' with a single lock. Use the singular '1 bloccato'."]},
+      {"screen": "Mobile 390x844", "issues": ["The toast shown when live mode is toggled ('Costruzione tattica live attiva...') covers the top bar and the live-bar for about 2.2 s. Consider bottom placement or a shorter duration on mobile."]},
+      {"screen": "Man defense paint drive", "issues": ["When the attacker drives to the rim, the on-ball defender D3 and the helper D4 overlap the attacker token, so his number '3' is mostly hidden. This is cosmetic."]}
+    ]
+  },
+  "test_report_links": ["/app/tests/helpers.js"],
+  "action_items": [
+    "LOW: Make the unlock-all label singular/plural ('1 bloccato' / 'N bloccati')",
+    "LOW (optional): On mobile, keep the live-toggle toast from covering the live-bar"
+  ],
+  "critical_code_review_comments": [
+    "Autosave in store.js is debounced by 350 ms, so localStorage only shows positions from during a drag once the pointer has rested for at least 350 ms. In-memory state updates on every move, which is correct; just keep this in mind for tests",
+    "CourtCanvas sends 'ballFree' when the ball is dropped away from any player, but Editor.onAction has no case for it. This is harmless because moveBall already stored the free position, but an explicit no-op or comment would make that clear",
+    "In live mode, Genera difesa skips the confirm dialog on a fresh play, because liveDefensePhase writes defGen and hasGenerated() becomes true. This is acceptable, because positions match the engine output",
+    "newPhaseFrom does not copy 'locked', so locks apply to a single phase. This matches the spec"
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend only)", "frontend": "100% of the requested flows (3 cosmetic notes)"},
+  "test_credentials": "none required",
+  "seed_data_creation": "New plays created in browser localStorage only (ephemeral Playwright contexts)",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Values verified on a new play. Zone 2-3 at the point: d1 (7.7,5.6), d2 (7.7,9.4), d3 (2.7,3.9), d4 (2.7,11.1), d5 (2.3,7.5). Ball to o3: d2 on ball (5.76,11.48), d1 (5.8,8.2), d3 (2,6), d4 (2.5,12.5), d5 (2,9.4), chip 'Zona 2-3 · palla: ala · lato forte destro'. Ball to o5: d4 (1.35,12.99) on ball. Zone 3-2 corner: d5 (1.35,12.99) on ball, d4 (1.7,9.5). Man mode: dragging o2 moves only d2. o3 driving to (2.2,8.2) gives d3 on ball, d4 helper, note 'Penetrazione di A3: aiuto di D4 davanti al ferro', chip 'area del ferro'. To read localStorage during a drag, hold the pointer still for at least 600 ms (350 ms debounce). Ball screen pos = __sp(holder) + 0.36*s on both axes. Glide check: 12 distinct canvas hashes in about 720 ms after a mode switch."
+}
