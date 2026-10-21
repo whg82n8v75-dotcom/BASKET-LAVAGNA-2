@@ -1,0 +1,25 @@
+{
+  "summary": "Iteration 4, frontend only, desktop 1920x1080, Playwright with checks against localStorage. Every requested item passed. (1) Rotation preview ghosts: while the ball is dragged (mouse still down), ghost circles with the defender number and a dashed line from each defender appear at the targets. They disappear once the defenders arrive. Switching defense-preview-switch OFF stores preview:false and stops the ghosts while defenders still glide. Switching it back ON brings them back. (2) Force in man defense, with o3 holding the ball at (6.6,12.7): baseline puts d3 at (5.76,11.33), closer to the center. Middle puts d3 at (5.46,12.38), toward the sideline and 0.3 deeper. The 'Spinta' note updates in the defense reading, and switching back to baseline restores d3 exactly. (3) A new play defaults to strategy 'switch', and defense-strategy-switch is highlighted. (4) Man screen test: an o5 screen from the right corner to near o1 creates Fase 2 ('Blocco di A5 per A1 (sulla palla): Cambio difensivo'). In Fase 3 o1 is dragged past the screen, giving the events 'uscita dal blocco di A1' and the note 'Cambio: D5 prende la palla, D1 anticipa il rollante'. D5 is now on ball ('D5 sulla palla tra A1 e canestro'). In Zone 2-3 the same flow gives Fase 2 and Fase 3 notes containing 'la zona non cambia'. (5) Regression: undo/redo, Conferma fase, Genera difesa and playback all work. No console errors.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Live rotation preview", "issues": ["Ghost targets use fill rgba(37,99,235,0.18), stroke #93C5FD and text #BFDBFE, all at alpha 0.55. On the light wood floor they look pale grey rather than blue, and the dashed connector line is barely visible. Consider a stronger stroke (e.g. #2563EB, alpha 0.8) or a darker number."]}
+    ]
+  },
+  "test_report_links": ["/app/tests/helpers.js", "/app/tests/ghost_count.js"],
+  "action_items": ["LOW (optional): Raise the contrast of the ghost preview markers and connector line on the wood court"],
+  "critical_code_review_comments": [
+    "In onBall(), man mode always passes a force, so the legacy branch 'ball.dep > 3.4 → lat -= side*0.35' now runs only for zones, where prm has no force. This is fine, but documenting it would help.",
+    "Strategy switches change state.assign at runtime, but the defense-assign-* selects in the panel still show the original cfg.assign. Users may expect the panel to show the switched matchup ('D5 marca A1') for the current phase.",
+    "The strategy section only renders in man mode. This is expected; it is noted for tests."
+  ],
+  "updated_files": ["/app/tests/ghost_count.js (new test helper only)"],
+  "success_rate": {"backend": "N/A (frontend only)", "frontend": "100% of the requested flows"},
+  "test_credentials": "none required",
+  "seed_data_creation": "New plays only, in ephemeral browser localStorage",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Helpers: inject /app/tests/helpers.js and /app/tests/ghost_count.js via page.add_script_tag. __w2s(x,y) converts world to screen for the half court, and __sp(pid, phase) gives a player's screen position. ghost_count's __ghostPx pixel heuristic is not discriminative because the court has similar tones; use screenshots taken about 60 ms after mouse.move while the mouse is still down. Man force values with o3 holding the ball: baseline d3 (5.76,11.33), middle d3 (5.46,12.38). Screen flow: tool-screen drag from o5 to world (8.7,8.4) auto-creates Fase 2. Then phase-chip-1, tool-select, phase-add, and drag o1 in phase 2 to (7.0,11.0) gives the switch notes. Strategy buttons only show in man mode."
+}
