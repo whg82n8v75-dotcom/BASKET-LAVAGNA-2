@@ -3,10 +3,10 @@ import { PATH_TYPES } from "./engine";
 
 export const MODES = { man: "Difesa a uomo", zone23: "Zona 2-3", zone32: "Zona 3-2" };
 export const STRATEGIES = {
+  switch: "Cambio difensivo",
   over: "Passaggio sopra il blocco",
   under: "Passaggio sotto il blocco",
   contain: "Contenimento del lungo (drop)",
-  switch: "Cambio difensivo",
   show: "Show e recupero",
   help: "Aiuto e recupero",
 };
@@ -22,7 +22,7 @@ export const PARAM_DEFS = [
   { k: "recovery", label: "Intensità del recupero dopo l'aiuto", lo: "Parziale", hi: "Completo" },
 ];
 export const DEFAULT_DEFENSE = {
-  mode: "man", strategy: "over", arrows: true, assign: {},
+  mode: "man", strategy: "switch", force: "baseline", preview: true, arrows: true, assign: {},
   params: { pressure: 0.6, markDist: 0.4, depth: 0.5, rimProtect: 0.6, help: 0.6, spacing: 0.5, rotSpeed: 0.5, reaction: 0.3, recovery: 0.7 },
 };
 export const ZONE_LABELS = { rim: "area del ferro", paint: "dentro l'area", post: "post basso", corner: "angolo", elbow: "gomito / media distanza", top: "punta", wing: "ala", backcourt: "metà campo difensiva" };
@@ -90,7 +90,11 @@ function onBall(ball, prm, extra = 0) {
   const d = hoopDist(ball);
   const cush = Math.min(lerp(1.9, 0.75, prm.pressure) + extra, Math.max(0.5, d - 0.5));
   const p = toward(ball, HOOP, cush);
-  if (ball.dep > 3.4) p.lat -= Math.sign(ball.lat) * 0.35 * smooth(1.5, 4, Math.abs(ball.lat));
+  const side = Math.sign(ball.lat) * smooth(1.2, 4, Math.abs(ball.lat));
+  if (prm.force === "middle") {
+    p.lat += side * 0.55;
+    p.dep -= 0.3 * Math.abs(side);
+  } else if (ball.dep > 3.4 || prm.force === "baseline") p.lat -= side * (prm.force === "baseline" ? 0.5 : 0.35);
   return p;
 }
 
@@ -448,7 +452,9 @@ function runEngine(play, cfg, upto = play.phases.length - 1, sticky = null) {
     ev.screensUse.forEach((sc) => evNotes.push(`uscita dal blocco di ${short(play, sc.T)}`));
     let outN, notes, helpers = [];
     if (cfg.mode === "man") {
-      ({ out: outN, notes, helpers } = manPhase({ play, ph, fr, ballN, holder, info, prm, ev, state, cfg, sticky: k === upto ? sticky : null }));
+      const prmMan = { ...prm, force: cfg.force || "baseline" };
+      ({ out: outN, notes, helpers } = manPhase({ play, ph, fr, ballN, holder, info, prm: prmMan, ev, state, cfg, sticky: k === upto ? sticky : null }));
+      if (holder && info.side) notes.push(prmMan.force === "middle" ? "Spinta: il difensore sulla palla chiude il fondo e indirizza verso il centro (aiuti pronti in mezzo)" : "Spinta: il difensore sulla palla chiude il centro e indirizza verso il fondo / linea laterale");
     } else {
       const offN = offs.filter((o) => ph.positions[o.id]).map((o) => fr.toN(ph.positions[o.id]));
       const base = zoneBase(cfg.mode, ballN, info, prm, offN);
@@ -462,6 +468,7 @@ function runEngine(play, cfg, upto = play.phases.length - 1, sticky = null) {
       }
       const zk = info.zone === "rim" ? "paint" : info.zone === "backcourt" ? "top" : info.zone;
       notes = [ZONE_NOTES[cfg.mode][zk]];
+      [...ev.screensSet, ...ev.screensUse].forEach((sc) => notes.push(`Blocco di ${short(play, sc.S)}: la zona non cambia, ogni difensore resta nella propria area e passa il giocatore al compagno`));
       const nearest = Object.keys(outN).sort((a, b) => len(sub(outN[a], ballN)) - len(sub(outN[b], ballN)))[0];
       if (nearest && !(info.zone === "top" && info.side === 0 && cfg.mode === "zone23")) notes.push(`Sulla palla: ${short(play, nearest)} (${ROLE_LABELS[cfg.mode][roles[nearest]]})`);
       Object.entries(roles).forEach(([d, r]) => notes.push(`${short(play, d)}: ${ROLE_LABELS[cfg.mode][r]}`));

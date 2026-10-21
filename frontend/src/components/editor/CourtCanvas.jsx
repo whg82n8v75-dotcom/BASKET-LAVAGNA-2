@@ -51,6 +51,7 @@ export const CourtCanvas = forwardRef(function CourtCanvas({ play, scene, tool, 
         lastT.current = now;
         const k = 1 - Math.exp(-dt / opts.smooth.tau);
         const pos = { ...sc.positions };
+        const targets = {};
         let moving = false;
         opts.smooth.ids.forEach((id) => {
           const t = sc.positions[id], d = disp.current[id];
@@ -67,8 +68,9 @@ export const CourtCanvas = forwardRef(function CourtCanvas({ play, scene, tool, 
           }
           disp.current[id] = { x: nx, y: ny };
           pos[id] = disp.current[id];
+          if (opts.smooth.preview && Math.hypot(t.x - nx, t.y - ny) > 0.25) targets[id] = t;
         });
-        shown = { ...sc, positions: pos };
+        shown = { ...sc, positions: pos, targets };
         cancelAnimationFrame(rafRef.current);
         if (moving) rafRef.current = requestAnimationFrame(() => paintRef.current?.(sceneRef.current));
         else lastT.current = 0;

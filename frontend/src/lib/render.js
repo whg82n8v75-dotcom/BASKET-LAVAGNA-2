@@ -291,6 +291,33 @@ export function drawScene(ctx, view, play, scene, opts = {}) {
     play.players.forEach((p) => {
       if (isVisible(play, p) && ghost[p.id]) drawPlayer(ctx, view, p, ghost[p.id], R, { ghost: true });
     });
+  if (scene.targets)
+    play.players.forEach((p) => {
+      const t = scene.targets[p.id], cur = scene.positions[p.id];
+      if (!t || !cur || !isVisible(play, p)) return;
+      const a = view.toS(cur), b = view.toS(t);
+      ctx.save();
+      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = "#93C5FD";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+      ctx.setLineDash([4, 3]);
+      ctx.fillStyle = "rgba(37,99,235,0.18)";
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, R * 0.92, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#BFDBFE";
+      ctx.font = `700 ${Math.round(R * 0.9)}px "Barlow Condensed", sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(String(p.number), b.x, b.y + 1);
+      ctx.restore();
+    });
   const holder = scene.ball?.holder;
   play.players.forEach((p) => {
     const pos = scene.positions[p.id];

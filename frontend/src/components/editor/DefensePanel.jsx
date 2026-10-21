@@ -50,6 +50,16 @@ export function DefensePanel({ open, onOpenChange, play, phaseIndex, onConfig, o
           )}
           {cfg.mode === "man" && (
             <div>
+              <Label>Spinta sul palleggiatore</Label>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button data-testid="defense-force-baseline" onClick={() => set({ force: "baseline" })} className={chip(cfg.force !== "middle")}>Verso il fondo</button>
+                <button data-testid="defense-force-middle" onClick={() => set({ force: "middle" })} className={chip(cfg.force === "middle")}>Verso il centro</button>
+              </div>
+            </div>
+          )}
+          {cfg.mode !== "man" && <p className="text-xs text-slate-400">Sui blocchi la zona non cambia: ogni difensore resta nella propria area.</p>}
+          {cfg.mode === "man" && (
+            <div>
               <Label>Assegnazioni</Label>
               <div className="grid grid-cols-2 gap-1.5">
                 {defs.map((d) => (
@@ -76,6 +86,10 @@ export function DefensePanel({ open, onOpenChange, play, phaseIndex, onConfig, o
               </div>
             ))}
           </div>
+          <label className="flex items-center justify-between text-sm">
+            <span>Anteprima rotazioni (sagome di destinazione)</span>
+            <Switch className="data-[state=unchecked]:bg-slate-600" data-testid="defense-preview-switch" checked={cfg.preview !== false} onCheckedChange={(preview) => set({ preview })} />
+          </label>
           <label className="flex items-center justify-between text-sm">
             <span>Frecce dei movimenti difensivi</span>
             <Switch className="data-[state=unchecked]:bg-slate-600" data-testid="defense-arrows-switch" checked={cfg.arrows} onCheckedChange={(arrows) => set({ arrows })} />

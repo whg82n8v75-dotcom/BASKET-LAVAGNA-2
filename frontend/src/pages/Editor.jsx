@@ -299,10 +299,10 @@ function Editor({ play }) {
     () => ({
       selectedId: sel?.kind === "player" ? sel.id : null, selectedDrawingId: sel?.kind === "drawing" ? sel.id : null, ghost, size: settings.playerSize,
       locked: play.phases[idx]?.locked,
-      smooth: liveOn ? { ids: play.players.filter((p) => p.team === "D").map((p) => p.id), tau: 0.1 + 0.35 * (play.defense?.params?.reaction ?? 0.3) } : null,
+      smooth: liveOn ? { ids: play.players.filter((p) => p.team === "D").map((p) => p.id), tau: 0.18 + 0.5 * (play.defense?.params?.reaction ?? 0.3), preview: play.defense?.preview !== false } : null,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sel, ghost, settings.playerSize, play.phases[idx]?.locked, liveOn, play.players, play.defense?.params?.reaction],
+    [sel, ghost, settings.playerSize, play.phases[idx]?.locked, liveOn, play.players, play.defense?.params?.reaction, play.defense?.preview],
   );
   const selPlayer = sel?.kind === "player" ? play.players.find((p) => p.id === sel.id) : null;
   const selDrawing = sel?.kind === "drawing" ? M.findDrawing(play, sel.id) : null;
