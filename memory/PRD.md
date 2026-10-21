@@ -14,6 +14,9 @@ PWA in italiano per allenatori di basket: lavagna tattica animata (fasi/timeline
 
 - 2026-06 v3: Costruzione tattica live (LiveBar): ricalcolo difensivo immediato della fase corrente durante il trascinamento di attaccanti/palla e al cambio possesso; easing visivo dei difensori (tau legato al ritardo di reazione); blocco/sblocco difensori (auto-blocco su trascinamento manuale), ripristina, conferma fase; nessuna modifica alle altre fasi in modalità live; aiuto "sticky" anti-oscillazione; contenimento in area anche per le zone; difensori non sovrapposti agli attaccanti.
 
+- 2026-06 v4: anteprima rotazioni (sagome destinazione), spinta fondo/centro, cambio predefinito a uomo, zona immobile sui blocchi.
+- 2026-06 v5: Confronto strategie affiancato (CompareDialog), Cambio selettivo per taglia (Esterno/Ala/Lungo, tolleranza, strategia alternativa), ruoli zona personalizzati con scambio.
+
 ## Limiti dichiarati
 - Pressing a tutto campo non gestito dal motore (preset manuale). GIF non disponibile.
 - Zone: nessun raddoppio/trap esplicito; ruoli zona assegnati per numero.

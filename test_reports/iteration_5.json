@@ -1,0 +1,30 @@
+{
+  "summary": "Iteration 5, frontend only. Desktop 1920x1080 and iPhone 390x844, Playwright with checks against localStorage. Every requested flow passed and there were no console or page errors. (1) Compare: preset-open-test-pnr-over → open-defense-btn → defense-compare-btn opens compare-dialog with two canvases side by side (677x759 each). Defaults are man:switch and man:over. compare-play animates both panes in sync (both went Fase 1→2→3→4 at the same moment). At Fase 3, pane A shows 'Cambio: D5 prende la palla, D1 anticipa il rollante' and pane B shows 'D1 passa sopra e insegue, D5 contiene...'. With select B set to zone23, pane B shows zone notes. After closing, play.phases positions and play.defense are identical to before. (2) Selective: defense-strategy-selective opens selective-options with switch-tol-0/1 and mismatch-over/under/contain/show/help all visible. With default sizes, Fase 3 reads 'D5 (lungo) e D1 (esterno) troppo diversi → passaggio sopra il blocco'. Tapping d5 on canvas → player-size-F stores size 'F' and the panel text updates to 'D5 ala'. After regenerating, Fase 3 reads 'hanno taglie compatibili → cambio' and 'D5 sulla palla tra A1 e canestro' (d5 1.43m from o1, d1 3.69m). switch-tol-0 + mismatch-under gives 'troppo diversi → passaggio sotto il blocco'. The generate-overwrite-btn confirm never appeared for this preset. (3) Zone roles zone23: setting zone-role-c to d1 moves d5 to gL (swap), and the reading lists 'D5: prima linea sinistra ... D1: centro'. zone32: setting t to d5 moves d1 to lR, and the reading gives 'Sulla palla: D5 (punta)'. Custom roles are kept per mode when switching back. (4) Live ON in Fase 2: changing zone-role-c to d1 instantly swaps the d1 and d5 positions; d2, d3 and d4 stay unchanged. (5) Regression: timeline playback animates, a live drag of o1 makes all defenders react, and undo restores o1. On mobile 390x844 the compare panes stack vertically (A at y=192, B at y=505), and play and selects are tappable.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "CompareDialog mobile 390x844", "issues": ["compare-select-a and compare-select-b are only 112px wide, so labels are cut to 'Uomo · Can' / 'Uomo · Pass' and you can't tell the strategies apart without opening the select. Consider putting the selects on their own row (w-full) on narrow screens, or using shorter labels.", "The court canvases are only about 200px tall on mobile. This is usable but small.", "The description says 'a sinistra e a destra', but on portrait the panes are stacked top and bottom."]},
+      {"screen": "CompareDialog notes", "issues": ["Pane notes are cut to 5 entries (notes.slice(0,5)) in a 92px box. In zone mode the role list loses D4/D5, and in man mode with selective the 'Spinta' line can be dropped. Consider removing the slice, since the box already scrolls."]}
+    ]
+  },
+  "test_report_links": ["/app/tests/helpers.js"],
+  "action_items": [
+    "LOW: On mobile, make the compare selects full width or shorten their labels so the strategy names are readable",
+    "LOW: Remove notes.slice(0,5) in CompareDialog Pane (the box already scrolls)",
+    "LOW (copy): Make the CompareDialog description neutral about pane orientation"
+  ],
+  "critical_code_review_comments": [
+    "In DefensePanel, zoneRoleMap(play, cfg.mode, cfg) is recomputed inside ROLE_ORDER.map for every role. Compute it once before the map. This is trivial perf and clarity.",
+    "In CompareDialog Pane, setPhase is called from draw() inside requestAnimationFrame. This is fine, but each pane re-renders on every phase change. That is acceptable.",
+    "Zone-role changes with live OFF do not reposition defenders until 'Genera difesa' is pressed. This is consistent with man-mode behaviour, but a hint in the UI could help."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend only)", "frontend": "100% of the requested flows"},
+  "test_credentials": "none required",
+  "seed_data_creation": "Library preset copies only, in ephemeral browser localStorage",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Navigate directly to /libreria, then preset-open-test-pnr-over. This creates a copy (ids o1..o5, d1..d5; 4 phases). Clicking phase chips while the defense Sheet is open closes the sheet, so select the phase first. Read notes from the defense-reading element or from __play().phases[i].defInfo. Inject /app/tests/helpers.js for __sp/__play/__hash. Zone role selects use defender ids (d1..d5) as values."
+}

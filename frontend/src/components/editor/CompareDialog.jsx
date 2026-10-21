@@ -46,9 +46,9 @@ const Pane = forwardRef(function Pane({ play, testid }, ref) {
       <div ref={wrap} className="relative flex-1 min-h-[180px] rounded-xl overflow-hidden bg-[#0B111C]">
         <canvas ref={canvas} style={{ width: size.w, height: size.h }} className="block" />
       </div>
-      <div className="h-[92px] overflow-y-auto rounded-lg bg-[#0B111C] border border-[#1E293B] p-2 text-[11px] text-slate-300" data-testid={`${testid}-notes`}>
+      <div className="h-[72px] sm:h-[92px] overflow-y-auto rounded-lg bg-[#0B111C] border border-[#1E293B] p-2 text-[11px] text-slate-300" data-testid={`${testid}-notes`}>
         <div className="font-semibold text-amber-300">Fase {phase + 1}{info ? ` · ${info.label}` : ""}</div>
-        {info?.notes.slice(0, 5).map((n, i) => <div key={i}>• {n}</div>)}
+        {info?.notes.map((n, i) => <div key={i}>• {n}</div>)}
       </div>
     </div>
   );
@@ -84,20 +84,20 @@ export function CompareDialog({ open, onOpenChange, play }) {
     setPlaying(false);
   }, [a, b, open]);
   const sel = (v, set, id) => (
-    <select data-testid={id} value={v} onChange={(e) => set(e.target.value)} className="h-10 rounded-lg bg-[#0B111C] border border-[#1E293B] px-2 text-sm min-w-0 flex-1">
+    <select data-testid={id} value={v} onChange={(e) => set(e.target.value)} className="h-10 rounded-lg bg-[#0B111C] border border-[#1E293B] px-2 text-sm min-w-0 w-full sm:w-auto sm:flex-1">
       {Object.entries(OPTIONS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
     </select>
   );
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent data-testid="compare-dialog" className="max-w-[min(1400px,98vw)] w-[98vw] h-[94dvh] bg-[#131C2E] border-[#1E293B] text-slate-100 flex flex-col p-3 sm:p-4 gap-3">
+      <DialogContent data-testid="compare-dialog" className="max-w-[min(1400px,98vw)] w-[98vw] h-[96dvh] bg-[#131C2E] border-[#1E293B] text-slate-100 flex flex-col p-2 sm:p-4 gap-2 sm:gap-3">
         <DialogHeader className="text-left">
           <DialogTitle className="font-heading text-2xl uppercase tracking-tight">Confronto strategie</DialogTitle>
-          <DialogDescription className="text-slate-400 text-xs">Stesso attacco, stessa palla: a sinistra e a destra la difesa calcolata con due strategie diverse (lo schema originale non viene modificato).</DialogDescription>
+          <DialogDescription className="text-slate-400 text-xs">Stesso attacco, stessa palla: nei due riquadri la difesa calcolata con due strategie diverse (lo schema originale non viene modificato).</DialogDescription>
         </DialogHeader>
         <div className="flex gap-2 items-center flex-wrap">
           {sel(a, setA, "compare-select-a")}
-          <span className="font-heading font-bold text-slate-500">VS</span>
+          <span className="font-heading font-bold text-slate-500 hidden sm:inline">VS</span>
           {sel(b, setB, "compare-select-b")}
           <button data-testid="compare-restart" onClick={() => { tRef.current = 0; ra.current?.draw(0); rb.current?.draw(0); }} className="w-10 h-10 grid place-items-center rounded-full hover:bg-[#1A263D]"><RotateCcw className="w-4 h-4" /></button>
           <button data-testid="compare-play" onClick={() => { if (!playing && tRef.current >= Math.max(ra.current?.total || 0, rb.current?.total || 0)) tRef.current = 0; setPlaying((p) => !p); }} className="w-11 h-11 grid place-items-center rounded-full bg-amber-500 text-[#090D14]">{playing ? <Pause className="w-5 h-5" fill="currentColor" /> : <Play className="w-5 h-5 ml-0.5" fill="currentColor" />}</button>
