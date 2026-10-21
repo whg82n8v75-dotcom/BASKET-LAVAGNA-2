@@ -1,0 +1,12 @@
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.font-heading {
+  font-family: "Barlow Condensed", sans-serif;
+}
+.font-mono {
+  font-family: "JetBrains Mono", monospace;
+}

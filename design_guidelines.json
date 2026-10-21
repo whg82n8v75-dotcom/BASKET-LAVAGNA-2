@@ -1,0 +1,214 @@
+{
+  "project_name": "Basket Tactics Motion",
+  "app_type": "mobile_web_app / PWA tool",
+  "language": "it-IT (Italian UI)",
+  "theme_strategy": {
+    "concept": "Tactical Pro Courtroom - Pro Dark UI with Warm Natural Beechwood/Maple Hardwood Court",
+    "theme": "dark",
+    "notes": "L'interfaccia dell'app è in dark mode profonda (#0b0f17, #131b26) stile tablet coach NBA/EuroLeague, mentre il rettangolo del campo è in legno parquet chiaro caldo (#E8C89A con texture a doghe sottili dorate #D4AF77), garantendo massima leggibilità visiva sia all'aperto che nei palazzetti."
+  },
+  "typography": {
+    "google_fonts_url": "https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap",
+    "heading_font": "'Barlow Condensed', sans-serif",
+    "body_font": "'Plus Jakarta Sans', sans-serif",
+    "mono_font": "'JetBrains Mono', monospace",
+    "hierarchy": {
+      "h1": "text-3xl sm:text-4xl font-extrabold uppercase tracking-tight font-heading",
+      "h2": "text-xl sm:text-2xl font-bold uppercase tracking-tight font-heading",
+      "h3": "text-lg sm:text-xl font-bold font-heading",
+      "h4": "text-base sm:text-lg font-semibold font-sans",
+      "body": "text-sm sm:text-base font-normal leading-relaxed text-slate-300 font-sans",
+      "meta_label": "text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono",
+      "player_number": "text-sm sm:text-base font-black font-heading leading-none"
+    }
+  },
+  "colors": {
+    "court": {
+      "wood_base": "#E5C396",
+      "wood_grain_light": "#EDD4B2",
+      "wood_grain_dark": "#D8B280",
+      "lines": "#FFFFFF",
+      "lane_area": "#CFA370",
+      "center_circle": "#DBB484",
+      "restricted_arc": "#FFFFFF",
+      "hoop_ring": "#FF5722",
+      "backboard": "#1E293B"
+    },
+    "players": {
+      "offense": {
+        "fill": "#FACC15",
+        "border": "#CA8A04",
+        "text": "#1E1B4B",
+        "badge_glow": "rgba(250, 204, 21, 0.4)",
+        "label": "Attacco (Giallo 1-5)"
+      },
+      "defense": {
+        "fill": "#2563EB",
+        "border": "#1D4ED8",
+        "text": "#FFFFFF",
+        "badge_glow": "rgba(37, 99, 235, 0.4)",
+        "label": "Difesa (Blu 1-5)"
+      },
+      "ball": {
+        "fill": "#EA580C",
+        "ribs": "#18181B",
+        "highlight": "#FDBA74"
+      }
+    },
+    "ui_dark": {
+      "bg_app": "#090D14",
+      "surface_header": "#0E1522",
+      "surface_card": "#131C2E",
+      "surface_card_hover": "#1A263D",
+      "surface_panel": "#0F172A",
+      "border": "#1E293B",
+      "border_accent": "#334155",
+      "text_primary": "#F8FAFC",
+      "text_secondary": "#94A3B8",
+      "text_muted": "#64748B",
+      "accent_action": "#F59E0B",
+      "accent_recording": "#EF4444",
+      "accent_success": "#10B981",
+      "accent_defense": "#3B82F6"
+    }
+  },
+  "drawing_tools": {
+    "tools": [
+      { "id": "select", "name": "Sposta / Seleziona", "icon": "Hand", "shortcut": "V" },
+      { "id": "move_arrow", "name": "Corsa giocatore (Freccia continua)", "icon": "MoveRight", "shortcut": "M" },
+      { "id": "pass_line", "name": "Passaggio palla (Tratteggiata)", "icon": "GitCommitHorizontal", "shortcut": "P" },
+      { "id": "dribble_line", "name": "Palleggio (Zig-zag / Wavy)", "icon": "Activity", "shortcut": "D" },
+      { "id": "screen_line", "name": "Blocco (Freccia con barra a T)", "icon": "Minus", "shortcut": "B" },
+      { "id": "zone_marker", "name": "Evidenzia Zona (Rettangolo/Cerchio)", "icon": "Scan", "shortcut": "Z" },
+      { "id": "eraser", "name": "Gomma per linee", "icon": "Eraser", "shortcut": "E" }
+    ],
+    "court_modes": [
+      { "id": "half", "name": "Metà Campo (Half-Court)", "aspect": "4:3 or 14:15" },
+      { "id": "full", "name": "Campo Intero (Full-Court)", "aspect": "28:15" }
+    ]
+  },
+  "timeline_and_animation": {
+    "phases_concept": "Fasi sequenziali (Fase 1: Set Iniziale, Fase 2: Taglio e Blocco, Fase 3: Tiro). Ogni fase registra le coordinate (x,y) di giocatori, palla e linee disegnate.",
+    "controls": [
+      "play_pause",
+      "step_backward",
+      "step_forward",
+      "loop_toggle",
+      "speed_selector (0.5x, 1x, 1.5x, 2x)",
+      "add_phase (+ Nuova Fase)",
+      "duplicate_phase",
+      "delete_phase"
+    ],
+    "interpolation": "Linear or ease-in-out movement per giocatore e palla durante il rendering a 60fps su canvas HTML5, con ghosting/traccia opzionale."
+  },
+  "recording_and_export": {
+    "video_recording": "Uso di HTML5 Canvas captureStream(30) + MediaRecorder API (video/webm;codecs=vp9 o mp4 in browser supportati) per registrare l'animazione di tutte le fasi in un file video scaricabile (.webm o .mp4). Include countdown di 3 secondi prima del ciak.",
+    "json_format": {
+      "version": "1.0",
+      "play_name": "Pick and Roll Centrale",
+      "category": "attacco",
+      "court_mode": "half",
+      "created_at": "ISO string",
+      "phases": []
+    },
+    "image_snapshot": "Salva schema come immagine PNG ad alta risoluzione del campo."
+  },
+  "preset_library_italian": [
+    {
+      "id": "play-pnr-01",
+      "title": "Pick and Roll Centrale (Spain PnR)",
+      "category": "attacco",
+      "court_mode": "half",
+      "difficulty": "Avanzato",
+      "description": "Blocco sulla palla del lungo 5 con back-screen del tiratore 2 per disorientare l'aiuto difensivo."
+    },
+    {
+      "id": "play-horns-02",
+      "title": "Horns Flare & Roll",
+      "category": "attacco",
+      "court_mode": "half",
+      "difficulty": "Intermedio",
+      "description": "Set corna classico con 4 e 5 ai gomiti, ribaltamento rapido e tiro dall'angolo."
+    },
+    {
+      "id": "play-press-03",
+      "title": "Pressing 1-2-1-1 a tutto campo",
+      "category": "difesa",
+      "court_mode": "full",
+      "difficulty": "Avanzato",
+      "description": "Trappola sui raddoppi post-rimessa lungo la linea laterale."
+    },
+    {
+      "id": "play-zone-04",
+      "title": "Difesa a Zona 2-3 Match-Up",
+      "category": "difesa",
+      "court_mode": "half",
+      "difficulty": "Base",
+      "description": "Copertura dell'arco e protezione del ferro con rotazione sul lato forte."
+    },
+    {
+      "id": "play-inbound-05",
+      "title": "Rimessa da fondo (BLOB Box)",
+      "category": "rimesse",
+      "court_mode": "half",
+      "difficulty": "Intermedio",
+      "description": "Disposizione a scatola con doppio blocco incrociato per layup o tripla in guardia."
+    },
+    {
+      "id": "play-trans-06",
+      "title": "Transizione Veloce 3-Corsie (Primary Break)",
+      "category": "transizione",
+      "court_mode": "full",
+      "difficulty": "Base",
+      "description": "Rimbalzo difensivo, outlet pass al playmaker e corsa a canestro dei due esterni."
+    }
+  ],
+  "image_assets": {
+    "tactics_board_coach": "https://images.pexels.com/photos/32688082/pexels-photo-32688082.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+    "team_huddle_clipboard": "https://images.pexels.com/photos/6767042/pexels-photo-6767042.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+    "court_lines_texture": "https://images.unsplash.com/photo-1627554652217-e780779afaf8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzV8MHwxfHNlYXJjaHwyfHxiYXNrZXRiYWxsJTIwY291cnQlMjB0ZXh0dXJlfGVufDB8fHx8MTc5MjYxNTI5NHww&ixlib=rb-4.1.0&q=85"
+  },
+  "touch_and_pwa_guidelines": {
+    "viewport": "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover",
+    "touch_targets": "Minimo 44px x 44px (h-11 w-11 o p-3) per tutti i bottoni e icone touch",
+    "prevent_default_scrolling_on_canvas": "touch-action: none sul canvas per consentire drag & drop fluido di giocatori e tracciamento disegni su iPad e iPhone",
+    "ios_safe_areas": "pb-[env(safe-area-inset-bottom)] e pt-[env(safe-area-inset-top)] per evitare sovrapposizioni su notch e home bar",
+    "offline_storage": "Salvataggio locale con window.localStorage per schemi utente e impostazioni (audio fischietto coach, velocità default, preferenza campo)",
+    "sound_effects": "Audio sintetico Web Audio API per fischietto inizio animazione e tocco palla opzionale (attivabile/disattivabile nei settings)"
+  },
+  "testing_attributes": {
+    "rule": "Tutti gli elementi interattivi devono avere l'attributo data-testid univoco in kebab-case",
+    "samples": [
+      "nav-home-btn",
+      "nav-editor-btn",
+      "nav-library-btn",
+      "nav-my-plays-btn",
+      "nav-settings-btn",
+      "court-canvas",
+      "tool-select-btn",
+      "tool-arrow-btn",
+      "tool-pass-btn",
+      "tool-screen-btn",
+      "tool-eraser-btn",
+      "timeline-play-btn",
+      "timeline-pause-btn",
+      "timeline-add-phase-btn",
+      "timeline-speed-select",
+      "export-video-btn",
+      "export-json-btn",
+      "import-json-btn",
+      "preset-play-card- spain-pnr",
+      "filter-category-attacco"
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Usa React con file .js e Tailwind CSS. L'app deve essere in lingua ITALIANA coerente con la terminologia cestistica italiana (Pick and roll, Blocco, Taglio, Rimessa, Fasi, Play/Pausa).",
+    "Il campo da basket deve essere un capolavoro visivo: parquet in legno chiaro dettagliato (finitura lucida parquet, cerchio di centrocampo, area dei 3 secondi 'key', arco da tre punti FIBA/NBA, linea dei tiri liberi, semicerchio no-sfondamento).",
+    "Disegna 5 attaccanti gialli numerati 1-5 e 5 difensori blu numerati 1-5, più 1 pallone da basket arancione con texture a spicchi.",
+    "La timeline delle fasi deve supportare creazione di multiple fasi (Fase 1, Fase 2, Fase 3...). Quando si preme Play, i giocatori scorrono con animazione fluida tra le posizioni della fase attuale e quella successiva.",
+    "Supporta registrazione video browser: quando l'utente clicca 'Registra Video MP4/WebM', il canvas viene registrato tramite MediaRecorder durante l'esecuzione dell'animazione e scaricato automaticamente come video clip.",
+    "Fornisci una ricca libreria predefinita di 6 schemi reali pronti con animazioni pre-impostate, e permetti all'utente di clonarli e modificarli.",
+    "Includi filtri rapidi per categoria ('Tutti', 'Attacco', 'Difesa', 'Rimesse', 'Transizione') e campo di ricerca.",
+    "Includi esportazione e importazione JSON per backup/condivisione istantanea tra allenatori."
+  ]
+}
