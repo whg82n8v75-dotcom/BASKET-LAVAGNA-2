@@ -34,16 +34,53 @@ export const CourtCanvas = forwardRef(function CourtCanvas({ play, scene, tool, 
     c.height = Math.round(view.h * dpr);
   }, [view, dpr]);
 
+  const disp = useRef({});
+  const lastT = useRef(0);
+  const rafRef = useRef(0);
+  const sceneRef = useRef(scene);
+  sceneRef.current = scene;
+  const paintRef = useRef(null);
   const paint = useCallback(
     (sc) => {
       const c = canvasRef.current;
       if (!view || !c || !sc) return;
-      drawScene(c.getContext("2d"), view, play, sc, { ...opts, draft: draftRef.current });
+      let shown = sc;
+      if (opts.smooth && !overrideRef.current) {
+        const now = performance.now();
+        const dt = lastT.current ? Math.min(0.05, (now - lastT.current) / 1000) : 0;
+        lastT.current = now;
+        const k = 1 - Math.exp(-dt / opts.smooth.tau);
+        const pos = { ...sc.positions };
+        let moving = false;
+        opts.smooth.ids.forEach((id) => {
+          const t = sc.positions[id], d = disp.current[id];
+          if (!t) return;
+          if (!d || id === gesture.current?.id) {
+            disp.current[id] = { ...t };
+            return;
+          }
+          let nx = d.x + (t.x - d.x) * k, ny = d.y + (t.y - d.y) * k;
+          if (Math.hypot(t.x - nx, t.y - ny) > 0.02) moving = true;
+          else {
+            nx = t.x;
+            ny = t.y;
+          }
+          disp.current[id] = { x: nx, y: ny };
+          pos[id] = disp.current[id];
+        });
+        shown = { ...sc, positions: pos };
+        cancelAnimationFrame(rafRef.current);
+        if (moving) rafRef.current = requestAnimationFrame(() => paintRef.current?.(sceneRef.current));
+        else lastT.current = 0;
+      } else disp.current = { ...sc.positions };
+      drawScene(c.getContext("2d"), view, play, shown, { ...opts, draft: draftRef.current });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [view, play, opts, fontsTick],
   );
 
+  paintRef.current = paint;
+  useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
   useEffect(() => {
     if (!overrideRef.current) paint(scene);
   }, [paint, scene]);

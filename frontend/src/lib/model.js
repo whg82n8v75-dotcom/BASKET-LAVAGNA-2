@@ -40,7 +40,7 @@ export function createPlay({ name = "Nuovo schema", category = "attacco", courtM
 
 const mapPhase = (play, i, fn) => ({ ...play, phases: play.phases.map((ph, k) => (k === i ? fn(ph) : ph)) });
 
-export function movePlayer(play, i, id, pos) {
+export function movePlayer(play, i, id, pos, propagate = true) {
   const old = play.phases[i].positions[id];
   const phases = play.phases.map((ph) => ph);
   phases[i] = {
@@ -52,7 +52,7 @@ export function movePlayer(play, i, id, pos) {
       return d;
     }),
   };
-  for (let k = i + 1; k < phases.length; k++) {
+  for (let k = i + 1; propagate && k < phases.length; k++) {
     if (!eq(phases[k].positions[id], old)) break;
     phases[k] = { ...phases[k], positions: { ...phases[k].positions, [id]: pos } };
   }
@@ -178,3 +178,13 @@ export function clonePlay(play, name) {
 export function isValidPlay(p) {
   return p && typeof p === "object" && Array.isArray(p.players) && Array.isArray(p.phases) && p.phases.length > 0 && p.phases.every((ph) => ph.positions && Array.isArray(ph.drawings));
 }
+
+export function setLock(play, i, id, on) {
+  return mapPhase(play, i, (ph) => {
+    const locked = { ...(ph.locked || {}) };
+    if (on) locked[id] = true;
+    else delete locked[id];
+    return { ...ph, locked };
+  });
+}
+export const clearLocks = (play, i) => mapPhase(play, i, (ph) => ({ ...ph, locked: {} }));

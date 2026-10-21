@@ -310,6 +310,12 @@ function manPhase(ctx) {
         helper = d;
       }
     });
+    const st = ctx.sticky?.find((d) => pool.includes(d));
+    if (st && st !== helper) {
+      const weakLow = Math.sign(out[st].lat) !== Math.sign(ballN.lat) && out[st].dep < 4.5;
+      const sc = len(sub(out[st], spot)) - (weakLow ? 1.5 : 0) - prm.rimProtect * (out[st].dep < 3 ? 1 : 0);
+      if (sc <= bs + 1.0) helper = st;
+    }
     if (helper) {
       const hMan = state.assign[helper];
       out[helper] = mix(out[helper], spot, 0.45 + 0.55 * prm.help);
@@ -411,7 +417,7 @@ const ZONE_NOTES = {
   },
 };
 
-export function generateDefense(play, cfg = DEFAULT_DEFENSE, { keep = {} } = {}) {
+function runEngine(play, cfg, upto = play.phases.length - 1, sticky = null) {
   const fr = courtFrame(play);
   const prm = { ...DEFAULT_DEFENSE.params, ...cfg.params };
   const offs = play.players.filter((p) => p.team === "O");
@@ -425,12 +431,14 @@ export function generateDefense(play, cfg = DEFAULT_DEFENSE, { keep = {} } = {})
   const roles = {};
   if (cfg.mode !== "man") defsP.slice(0, 5).forEach((d, i) => (roles[d.id] = ROLE_ORDER[cfg.mode][i]));
   const state = { assign, prevHelp: [], prevPos: null, prevScreens: [] };
-  const report = [];
-  const phases = play.phases.map((ph, k) => {
+  const results = [];
+  for (let k = 0; k <= upto; k++) {
+    const ph = play.phases[k];
     const holder = ph.ball?.holder && ph.positions[ph.ball.holder] ? ph.ball.holder : null;
     const ballN = holder ? fr.toN(ph.positions[holder]) : fr.toN({ x: ph.ball?.x ?? 7, y: ph.ball?.y ?? 7.5 });
     const info = readBall(ballN);
     const ev = detectEvents(play, k, fr, state.prevScreens);
+    if (holder && (info.zone === "paint" || info.zone === "rim")) ev.penetration = true;
     const evNotes = [];
     if (ev.pass) evNotes.push(`passaggio ${short(play, ev.pass.from)}→${short(play, ev.pass.to)}`);
     if (ev.penetration) evNotes.push(`penetrazione di ${short(play, holder)}`);
@@ -440,13 +448,18 @@ export function generateDefense(play, cfg = DEFAULT_DEFENSE, { keep = {} } = {})
     ev.screensUse.forEach((sc) => evNotes.push(`uscita dal blocco di ${short(play, sc.T)}`));
     let outN, notes, helpers = [];
     if (cfg.mode === "man") {
-      ({ out: outN, notes, helpers } = manPhase({ play, ph, fr, ballN, holder, info, prm, ev, state, cfg }));
+      ({ out: outN, notes, helpers } = manPhase({ play, ph, fr, ballN, holder, info, prm, ev, state, cfg, sticky: k === upto ? sticky : null }));
     } else {
       const offN = offs.filter((o) => ph.positions[o.id]).map((o) => fr.toN(ph.positions[o.id]));
       const base = zoneBase(cfg.mode, ballN, info, prm, offN);
       outN = {};
       Object.entries(roles).forEach(([d, r]) => (outN[d] = base[r]));
       if (info.inside) Object.keys(outN).forEach((d) => (outN[d] = mix(outN[d], ballN, 0.12 * prm.help)));
+      if (holder && (info.zone === "paint" || info.zone === "rim")) {
+        const rimRoles = cfg.mode === "zone23" ? ["c"] : ["lL", "lR"];
+        const cont = Object.keys(outN).filter((d) => !rimRoles.includes(roles[d])).sort((a, b) => len(sub(outN[a], ballN)) - len(sub(outN[b], ballN)))[0];
+        if (cont) outN[cont] = onBall(ballN, prm, -0.4);
+      }
       const zk = info.zone === "rim" ? "paint" : info.zone === "backcourt" ? "top" : info.zone;
       notes = [ZONE_NOTES[cfg.mode][zk]];
       const nearest = Object.keys(outN).sort((a, b) => len(sub(outN[a], ballN)) - len(sub(outN[b], ballN)))[0];
@@ -458,12 +471,21 @@ export function generateDefense(play, cfg = DEFAULT_DEFENSE, { keep = {} } = {})
     state.prevScreens = ev.screensSet;
     const gen = {};
     Object.entries(outN).forEach(([d, n]) => (gen[d] = fr.fromN(n)));
+    const defInfo = { zone: info.zone, side: info.side, events: evNotes, notes, helpers, mode: cfg.mode, label: `${ZONE_LABELS[info.zone]}${info.side ? ` · lato forte ${sideLabel(info.side)}` : ""}` };
+    results.push({ gen, defInfo });
+  }
+  return { results, prm, defsP };
+}
+
+export function generateDefense(play, cfg = DEFAULT_DEFENSE, { keep = {} } = {}) {
+  const { results, prm, defsP } = runEngine(play, cfg);
+  const report = results.map((r) => r.defInfo);
+  const phases = play.phases.map((ph, k) => {
+    const { gen, defInfo } = results[k];
     const positions = { ...ph.positions };
     Object.entries(gen).forEach(([d, p]) => {
-      if (!keep[k]?.includes(d)) positions[d] = p;
+      if (!keep[k]?.includes(d) && !ph.locked?.[d]) positions[d] = p;
     });
-    const defInfo = { zone: info.zone, side: info.side, events: evNotes, notes, helpers, mode: cfg.mode, label: `${ZONE_LABELS[info.zone]}${info.side ? ` · lato forte ${sideLabel(info.side)}` : ""}` };
-    report.push(defInfo);
     return { ...ph, positions, defGen: gen, defInfo };
   });
   const defIds = new Set(defsP.map((d) => d.id));
@@ -500,3 +522,15 @@ export function manualEdits(play) {
 }
 
 export const hasGenerated = (play) => play.phases.some((ph) => ph.defGen);
+
+export function liveDefensePhase(play, k, cfg = DEFAULT_DEFENSE) {
+  const ph = play.phases[k];
+  if (!ph) return play;
+  const { results } = runEngine(play, { ...DEFAULT_DEFENSE, ...cfg }, k, ph.defInfo?.helpers || null);
+  const { gen, defInfo } = results[k];
+  const positions = { ...ph.positions };
+  Object.entries(gen).forEach(([d, p]) => {
+    if (!ph.locked?.[d]) positions[d] = p;
+  });
+  return { ...play, phases: play.phases.map((x, i) => (i === k ? { ...ph, positions, defGen: gen, defInfo } : x)) };
+}

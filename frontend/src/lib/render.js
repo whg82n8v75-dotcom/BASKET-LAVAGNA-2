@@ -167,7 +167,7 @@ export function drawDrawing(ctx, view, d, R, selected) {
   ctx.restore();
 }
 
-function drawPlayer(ctx, view, p, pos, R, { selected, holder, ghost }) {
+function drawPlayer(ctx, view, p, pos, R, { selected, holder, ghost, locked }) {
   const s = view.toS(pos);
   ctx.save();
   if (ghost) {
@@ -224,6 +224,20 @@ function drawPlayer(ctx, view, p, pos, R, { selected, holder, ghost }) {
     ctx.fillStyle = "#F8FAFC";
     ctx.fillText(p.name, s.x, s.y + R + 3 + th / 2 + 1);
   }
+  if (locked) {
+    const lx = s.x + R * 0.78, ly = s.y - R * 0.78, r = Math.max(6, R * 0.42);
+    ctx.fillStyle = "#F8FAFC";
+    ctx.beginPath();
+    ctx.arc(lx, ly, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#0B111C";
+    ctx.fillRect(lx - r * 0.5, ly - r * 0.1, r, r * 0.7);
+    ctx.strokeStyle = "#0B111C";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(lx, ly - r * 0.1, r * 0.33, Math.PI, 0);
+    ctx.stroke();
+  }
   if (selected) {
     ctx.setLineDash([5, 4]);
     ctx.strokeStyle = "#FFFFFF";
@@ -267,7 +281,7 @@ function drawBall(ctx, view, ball, R) {
 export const isVisible = (play, p) => !(play.hidden || {})[p.team];
 
 export function drawScene(ctx, view, play, scene, opts = {}) {
-  const { selectedId, selectedDrawingId, draft, ghost, size = 1, title } = opts;
+  const { selectedId, selectedDrawingId, draft, ghost, size = 1, title, locked } = opts;
   const R = playerRadius(view, size);
   ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
   ctx.drawImage(courtImage(view), 0, 0, view.w, view.h);
@@ -280,7 +294,7 @@ export function drawScene(ctx, view, play, scene, opts = {}) {
   const holder = scene.ball?.holder;
   play.players.forEach((p) => {
     const pos = scene.positions[p.id];
-    if (pos && isVisible(play, p)) drawPlayer(ctx, view, p, pos, R, { selected: p.id === selectedId, holder: holder === p.id && !play.hidden?.ball });
+    if (pos && isVisible(play, p)) drawPlayer(ctx, view, p, pos, R, { selected: p.id === selectedId, holder: holder === p.id && !play.hidden?.ball, locked: locked?.[p.id] });
   });
   if (scene.ball && !play.hidden?.ball) drawBall(ctx, view, scene.ball, R);
   if (title) {

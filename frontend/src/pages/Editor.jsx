@@ -12,7 +12,8 @@ import { EditorTopBar } from "@/components/editor/EditorTopBar";
 import { ExportVideoDialog } from "@/components/editor/ExportVideoDialog";
 import { DefensePanel } from "@/components/editor/DefensePanel";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { generateDefense, manualEdits, hasGenerated, DEFAULT_DEFENSE } from "@/lib/defense";
+import { generateDefense, manualEdits, hasGenerated, DEFAULT_DEFENSE, liveDefensePhase } from "@/lib/defense";
+import { LiveBar } from "@/components/editor/LiveBar";
 
 function Editor({ play }) {
   const { upsertPlay, settings, copyPlay } = usePlays();
@@ -42,6 +43,10 @@ function Editor({ play }) {
   const idx = Math.min(cur, play.phases.length - 1);
   const tl = useMemo(() => buildTimeline(play), [play]);
 
+  const liveOn = !!play.defense?.live;
+  const cfgOf = (p) => ({ ...DEFAULT_DEFENSE, ...(p.defense || {}), params: { ...DEFAULT_DEFENSE.params, ...(p.defense?.params || {}) } });
+  const react = (p, k = idx) => (p.defense?.live ? liveDefensePhase(p, k, cfgOf(p)) : p);
+  const isDef = (id) => play.players.find((x) => x.id === id)?.team === "D";
   const live = useCallback((p) => {
     playRef.current = p;
     upsertPlay(p);
@@ -185,13 +190,14 @@ function Editor({ play }) {
         pushHist();
         break;
       case "movePlayer":
-        live(M.movePlayer(p, idx, a.id, a.pos));
+        if (liveOn && isDef(a.id)) live(M.setLock(M.movePlayer(p, idx, a.id, a.pos, false), idx, a.id, true));
+        else live(react(M.movePlayer(p, idx, a.id, a.pos, !liveOn)));
         break;
       case "moveBall":
-        live(M.setBall(p, idx, { holder: null, x: a.pos.x, y: a.pos.y }, false));
+        live(react(M.setBall(p, idx, { holder: null, x: a.pos.x, y: a.pos.y }, false)));
         break;
       case "setHolder":
-        live(M.setBall(p, idx, { holder: a.id }, false));
+        live(react(M.setBall(p, idx, { holder: a.id }, false)));
         break;
       case "selectPlayer":
         setSel({ kind: "player", id: a.id });
@@ -204,7 +210,7 @@ function Editor({ play }) {
         break;
       case "addDrawing": {
         const { play: np, info } = M.addDrawing(p, idx, a.drawing, settings.duration);
-        commit(np);
+        commit(info === "created" ? react(np, idx + 1) : np);
         if (info === "created") toast.success(`Creata la Fase ${idx + 2}: il movimento verrà animato`, { duration: 2000 });
         else if (info === "updated") toast(`Fase ${idx + 2} aggiornata con il nuovo movimento`, { duration: 1500 });
         break;
@@ -235,7 +241,7 @@ function Editor({ play }) {
   };
   const addPhase = () => {
     exitPlayback();
-    commit(M.insertPhaseAfter(play, idx, settings.duration));
+    commit(react(M.insertPhaseAfter(play, idx, settings.duration), idx + 1));
     setCur(idx + 1);
     setSel(null);
     toast(`Fase ${idx + 2} creata: sposta i giocatori nelle nuove posizioni`, { duration: 1800 });
@@ -290,8 +296,13 @@ function Editor({ play }) {
   const scene = useMemo(() => phaseScene(play, idx), [play, idx]);
   const ghost = settings.ghost && idx > 0 ? play.phases[idx - 1].positions : null;
   const opts = useMemo(
-    () => ({ selectedId: sel?.kind === "player" ? sel.id : null, selectedDrawingId: sel?.kind === "drawing" ? sel.id : null, ghost, size: settings.playerSize }),
-    [sel, ghost, settings.playerSize],
+    () => ({
+      selectedId: sel?.kind === "player" ? sel.id : null, selectedDrawingId: sel?.kind === "drawing" ? sel.id : null, ghost, size: settings.playerSize,
+      locked: play.phases[idx]?.locked,
+      smooth: liveOn ? { ids: play.players.filter((p) => p.team === "D").map((p) => p.id), tau: 0.1 + 0.35 * (play.defense?.params?.reaction ?? 0.3) } : null,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sel, ghost, settings.playerSize, play.phases[idx]?.locked, liveOn, play.players, play.defense?.params?.reaction],
   );
   const selPlayer = sel?.kind === "player" ? play.players.find((p) => p.id === sel.id) : null;
   const selDrawing = sel?.kind === "drawing" ? M.findDrawing(play, sel.id) : null;
@@ -324,6 +335,29 @@ function Editor({ play }) {
           navigate(`/editor/${c.id}`);
         }}
       />
+      <LiveBar
+        play={play}
+        phaseIndex={idx}
+        onToggle={(on) => {
+          exitPlayback();
+          const p = { ...playRef.current, defense: { ...cfgOf(playRef.current), live: on } };
+          commit(on ? react({ ...p, hidden: { ...(p.hidden || {}), D: false } }) : p);
+          toast(on ? "Costruzione tattica live attiva: sposta attacco e palla, la difesa reagisce" : "Reazioni automatiche disattivate: gestione manuale", { duration: 2200 });
+        }}
+        onMode={(mode) => commit(react({ ...playRef.current, defense: { ...cfgOf(playRef.current), mode } }))}
+        onReset={() => {
+          commit(liveDefensePhase(M.clearLocks(playRef.current, idx), idx, cfgOf(playRef.current)));
+          toast("Posizioni difensive ripristinate in questa fase", { duration: 1500 });
+        }}
+        onUnlockAll={() => commit(react(M.clearLocks(playRef.current, idx)))}
+        onConfirm={() => {
+          addPhase();
+        }}
+        onParams={() => {
+          exitPlayback();
+          setDefOpen(true);
+        }}
+      />
       <div className="flex-1 min-h-0 flex flex-col landscape:flex-row">
         <div className="relative flex-1 min-h-0 min-w-0 order-1 landscape:order-2" data-testid="court-area">
           <CourtCanvas ref={canvasRef} play={play} scene={scene} tool={tool} drawColor={drawColor} symbolKind={symbolKind} opts={opts} interactive={!playing} onAction={onAction} />
@@ -333,7 +367,14 @@ function Editor({ play }) {
               player={selPlayer}
               hasBall={play.phases[idx].ball?.holder === selPlayer.id}
               onChange={(patch) => live(M.updatePlayer(playRef.current, selPlayer.id, patch))}
-              onGiveBall={() => commit(M.setBall(play, idx, { holder: selPlayer.id }, false))}
+              onGiveBall={() => commit(react(M.setBall(play, idx, { holder: selPlayer.id }, false)))}
+              lockable={selPlayer.team === "D"}
+              locked={!!play.phases[idx].locked?.[selPlayer.id]}
+              onToggleLock={() => {
+                const on = !play.phases[idx].locked?.[selPlayer.id];
+                commit(on ? M.setLock(play, idx, selPlayer.id, true) : react(M.setLock(play, idx, selPlayer.id, false)));
+                toast(on ? "Difensore bloccato: il motore non lo sposterà" : "Difensore sbloccato: torna automatico", { duration: 1500 });
+              }}
               onRemove={() => {
                 commit(M.removePlayer(play, selPlayer.id));
                 setSel(null);
@@ -387,7 +428,7 @@ function Editor({ play }) {
         settingsOpen={phaseOpen}
         setSettingsOpen={setPhaseOpen}
       />
-      <DefensePanel open={defOpen} onOpenChange={setDefOpen} play={play} phaseIndex={idx} onConfig={(defense) => live({ ...playRef.current, defense })} onGenerate={onGenerate} />
+      <DefensePanel open={defOpen} onOpenChange={setDefOpen} play={play} phaseIndex={idx} onConfig={(defense) => live(react({ ...playRef.current, defense }))} onGenerate={onGenerate} />
       <AlertDialog open={!!genAsk} onOpenChange={(o) => !o && setGenAsk(null)}>
         <AlertDialogContent data-testid="generate-confirm-dialog" className="bg-[#131C2E] border-[#1E293B] text-slate-100">
           <AlertDialogHeader>

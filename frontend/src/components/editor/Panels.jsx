@@ -1,4 +1,4 @@
-import { X, Trash2, Circle } from "lucide-react";
+import { X, Trash2, Circle, Lock, Unlock } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { PLAYER_COLORS, DRAW_COLORS } from "@/lib/model";
 import { TOOLS } from "./Toolbar";
@@ -18,7 +18,7 @@ function Swatches({ colors, value, onPick, prefix }) {
   );
 }
 
-export function PlayerPanel({ player, hasBall, onChange, onGiveBall, onRemove, onClose }) {
+export function PlayerPanel({ player, hasBall, onChange, onGiveBall, onRemove, onClose, lockable, locked, onToggleLock }) {
   return (
     <Card testid="player-panel">
       <div className="flex items-center justify-between">
@@ -36,6 +36,11 @@ export function PlayerPanel({ player, hasBall, onChange, onGiveBall, onRemove, o
       <Swatches colors={PLAYER_COLORS} value={player.color} onPick={(color) => onChange({ color })} prefix="player-color" />
       <div className="grid grid-cols-2 gap-2">
         <button data-testid="player-give-ball" onClick={onGiveBall} disabled={hasBall} className="h-10 rounded-lg bg-orange-600/90 text-white text-sm font-semibold flex items-center justify-center gap-1.5 disabled:opacity-40"><Circle className="w-4 h-4" fill="currentColor" />{hasBall ? "Ha la palla" : "Dai la palla"}</button>
+        {lockable && (
+          <button data-testid="player-lock-toggle" onClick={onToggleLock} className={`col-span-2 h-10 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 border ${locked ? "border-amber-500 text-amber-300 bg-amber-500/10" : "border-[#334155] text-slate-200 hover:bg-[#1A263D]"}`}>
+            {locked ? <><Unlock className="w-4 h-4" />Sblocca (torna automatico)</> : <><Lock className="w-4 h-4" />Blocca difensore</>}
+          </button>
+        )}
         <button data-testid="player-remove" onClick={onRemove} className="h-10 rounded-lg border border-red-900/60 text-red-400 text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-red-950/40"><Trash2 className="w-4 h-4" />Rimuovi</button>
       </div>
     </Card>
