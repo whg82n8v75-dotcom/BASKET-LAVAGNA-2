@@ -9,7 +9,11 @@ export const STRATEGIES = {
   contain: "Contenimento del lungo (drop)",
   show: "Show e recupero",
   help: "Aiuto e recupero",
+  selective: "Cambio selettivo (per taglia)",
 };
+export const SIZES = { G: "Esterno", F: "Ala", C: "Lungo" };
+const RANK = { G: 0, F: 1, C: 2 };
+export const sizeOf = (p) => p?.size || (p?.number <= 2 ? "G" : p?.number === 3 ? "F" : "C");
 export const PARAM_DEFS = [
   { k: "pressure", label: "Pressione sulla palla", lo: "Distanza", hi: "Aggressiva" },
   { k: "markDist", label: "Distanza di marcatura (senza palla)", lo: "Stretta", hi: "Larga" },
@@ -193,11 +197,20 @@ function manPhase(ctx) {
     else normal[d] = manOff(A, ballN, info, prm, ev.cuts.has(man));
   });
   Object.assign(out, normal);
-  const strat = cfg.strategy;
+  const pickStrat = (dS, dT) => {
+    if (cfg.strategy !== "selective") return cfg.strategy;
+    const pS = play.players.find((x) => x.id === dS), pT = play.players.find((x) => x.id === dT);
+    const zS = sizeOf(pS), zT = sizeOf(pT);
+    const ok = Math.abs(RANK[zS] - RANK[zT]) <= (cfg.switchTol ?? 1);
+    const alt = cfg.mismatch || "over";
+    notes.push(`Cambio selettivo: ${short(play, dS)} (${SIZES[zS].toLowerCase()}) e ${short(play, dT)} (${SIZES[zT].toLowerCase()}) ${ok ? "hanno taglie compatibili → cambio" : `troppo diversi → ${STRATEGIES[alt].toLowerCase()}`}`);
+    return ok ? "switch" : alt;
+  };
   const help = { helpers: [] };
   ev.screensSet.forEach((sc) => {
     const dS = defs.find((x) => state.assign[x] === sc.S), dT = defs.find((x) => state.assign[x] === sc.T);
     if (!dS || !dT) return;
+    const strat = pickStrat(dS, dT);
     const S = nPos(sc.S), T = nPos(sc.T);
     notes.push(`Blocco di ${short(play, sc.S)} per ${short(play, sc.T)}${sc.ball ? " (sulla palla)" : ""}: ${STRATEGIES[strat]}`);
     if (!sc.ball) return;
@@ -213,6 +226,7 @@ function manPhase(ctx) {
   ev.screensUse.forEach((sc) => {
     const dS = defs.find((x) => state.assign[x] === sc.S), dT = defs.find((x) => state.assign[x] === sc.T);
     if (!dS || !dT || !ph.positions[sc.S]) return;
+    const strat = pickStrat(dS, dT);
     const T = nPos(sc.T), S = nPos(sc.S), spot = sc.spot;
     const trail = add(T, mul(norm(sub(spot, T)), 1.0));
     const under = toward(T, HOOP, 2.2);
@@ -433,7 +447,7 @@ function runEngine(play, cfg, upto = play.phases.length - 1, sticky = null) {
     if (m) assign[d.id] = m.id;
   });
   const roles = {};
-  if (cfg.mode !== "man") defsP.slice(0, 5).forEach((d, i) => (roles[d.id] = ROLE_ORDER[cfg.mode][i]));
+  if (cfg.mode !== "man") Object.entries(zoneRoleMap(play, cfg.mode, cfg)).forEach(([r, d]) => (roles[d] = r));
   const state = { assign, prevHelp: [], prevPos: null, prevScreens: [] };
   const results = [];
   for (let k = 0; k <= upto; k++) {
@@ -548,3 +562,26 @@ export function liveDefensePhase(play, k, cfg = DEFAULT_DEFENSE) {
   });
   return { ...play, phases: play.phases.map((x, i) => (i === k ? { ...ph, positions, defGen: gen, defInfo } : x)) };
 }
+
+export function zoneRoleMap(play, mode, cfg = {}) {
+  const defs = play.players.filter((p) => p.team === "D").sort((a, b) => a.number - b.number).map((p) => p.id);
+  const custom = cfg.zoneRoles?.[mode] || {};
+  const map = {};
+  const used = new Set();
+  ROLE_ORDER[mode].forEach((r) => {
+    if (custom[r] && defs.includes(custom[r]) && !used.has(custom[r])) {
+      map[r] = custom[r];
+      used.add(custom[r]);
+    }
+  });
+  ROLE_ORDER[mode].forEach((r) => {
+    if (map[r]) return;
+    const d = defs.find((x) => !used.has(x));
+    if (d) {
+      map[r] = d;
+      used.add(d);
+    }
+  });
+  return map;
+}
+export { ROLE_ORDER };

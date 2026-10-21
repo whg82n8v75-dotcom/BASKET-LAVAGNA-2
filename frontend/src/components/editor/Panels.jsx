@@ -3,6 +3,7 @@ import { Switch } from "@/components/ui/switch";
 import { PLAYER_COLORS, DRAW_COLORS } from "@/lib/model";
 import { TOOLS } from "./Toolbar";
 import { SYMBOLS } from "@/lib/render";
+import { SIZES, sizeOf } from "@/lib/defense";
 
 const Card = ({ children, testid }) => (
   <div data-testid={testid} className="absolute right-2 top-2 z-20 w-[min(300px,calc(100%-16px))] rounded-2xl bg-[#131C2E]/95 backdrop-blur-xl border border-[#1E293B] shadow-2xl p-3 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">{children}</div>
@@ -34,6 +35,14 @@ export function PlayerPanel({ player, hasBall, onChange, onGiveBall, onRemove, o
         </label>
       </div>
       <Swatches colors={PLAYER_COLORS} value={player.color} onPick={(color) => onChange({ color })} prefix="player-color" />
+      <div>
+        <div className="text-[11px] text-slate-400 mb-1">Taglia (per il cambio selettivo)</div>
+        <div className="grid grid-cols-3 gap-1.5">
+          {Object.entries(SIZES).map(([k, l]) => (
+            <button key={k} data-testid={`player-size-${k}`} onClick={() => onChange({ size: k })} className={`h-9 rounded-lg text-xs font-semibold border ${sizeOf(player) === k ? "bg-amber-500 text-[#090D14] border-amber-500" : "border-[#1E293B] text-slate-300"}`}>{l}</button>
+          ))}
+        </div>
+      </div>
       <div className="grid grid-cols-2 gap-2">
         <button data-testid="player-give-ball" onClick={onGiveBall} disabled={hasBall} className="h-10 rounded-lg bg-orange-600/90 text-white text-sm font-semibold flex items-center justify-center gap-1.5 disabled:opacity-40"><Circle className="w-4 h-4" fill="currentColor" />{hasBall ? "Ha la palla" : "Dai la palla"}</button>
         {lockable && (

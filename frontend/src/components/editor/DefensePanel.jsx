@@ -1,8 +1,8 @@
-import { Shield, Wand2 } from "lucide-react";
+import { Shield, Wand2, Columns2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { MODES, STRATEGIES, PARAM_DEFS, DEFAULT_DEFENSE } from "@/lib/defense";
+import { MODES, STRATEGIES, PARAM_DEFS, DEFAULT_DEFENSE, ROLE_LABELS, ROLE_ORDER, zoneRoleMap, sizeOf, SIZES } from "@/lib/defense";
 
 const Label = ({ children }) => <div className="text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-2">{children}</div>;
 
@@ -20,7 +20,7 @@ function Reading({ play, phaseIndex }) {
   );
 }
 
-export function DefensePanel({ open, onOpenChange, play, phaseIndex, onConfig, onGenerate }) {
+export function DefensePanel({ open, onOpenChange, play, phaseIndex, onConfig, onGenerate, onCompare }) {
   const cfg = { ...DEFAULT_DEFENSE, ...(play.defense || {}), params: { ...DEFAULT_DEFENSE.params, ...(play.defense?.params || {}) } };
   const set = (patch) => onConfig({ ...cfg, ...patch });
   const offs = play.players.filter((p) => p.team === "O");
@@ -45,6 +45,24 @@ export function DefensePanel({ open, onOpenChange, play, phaseIndex, onConfig, o
               <Label>Strategia sui blocchi</Label>
               <div className="grid grid-cols-2 gap-1.5">
                 {Object.entries(STRATEGIES).map(([k, l]) => <button key={k} data-testid={`defense-strategy-${k}`} onClick={() => set({ strategy: k })} className={`${chip(cfg.strategy === k)} h-auto py-2 text-left leading-tight`}>{l}</button>)}
+              </div>
+            </div>
+          )}
+          {cfg.mode === "man" && cfg.strategy === "selective" && (
+            <div className="rounded-xl border border-[#1E293B] p-3 space-y-3" data-testid="selective-options">
+              <div className="text-xs text-slate-400">Taglie dei difensori: {defs.map((d) => `D${d.number} ${SIZES[sizeOf(d)].toLowerCase()}`).join(" · ")} (modificabili toccando il giocatore)</div>
+              <div>
+                <Label>Quando cambiare</Label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button data-testid="switch-tol-0" onClick={() => set({ switchTol: 0 })} className={chip((cfg.switchTol ?? 1) === 0)}>Solo stessa taglia</button>
+                  <button data-testid="switch-tol-1" onClick={() => set({ switchTol: 1 })} className={chip((cfg.switchTol ?? 1) === 1)}>Anche taglie vicine</button>
+                </div>
+              </div>
+              <div>
+                <Label>Se le taglie sono diverse</Label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {["over", "under", "contain", "show", "help"].map((k) => <button key={k} data-testid={`mismatch-${k}`} onClick={() => set({ mismatch: k })} className={`${chip((cfg.mismatch || "over") === k)} h-auto py-2 text-left leading-tight`}>{STRATEGIES[k]}</button>)}
+                </div>
               </div>
             </div>
           )}
@@ -74,7 +92,33 @@ export function DefensePanel({ open, onOpenChange, play, phaseIndex, onConfig, o
             </div>
           )}
           {cfg.mode !== "man" && (
-            <p className="text-xs text-slate-400">Ruoli: i difensori vengono assegnati per numero ({cfg.mode === "zone23" ? "D1-D2 prima linea sx/dx, D3-D4 seconda linea sx/dx, D5 centro" : "D1 punta, D2-D3 ali sx/dx, D4-D5 bassi sx/dx"}).</p>
+            <div data-testid="zone-roles">
+              <Label>Ruoli nella zona</Label>
+              <div className="space-y-1.5">
+                {ROLE_ORDER[cfg.mode].map((r) => {
+                  const map = zoneRoleMap(play, cfg.mode, cfg);
+                  return (
+                    <label key={r} className="flex items-center justify-between gap-2 text-xs">
+                      <span className="text-slate-300 capitalize">{ROLE_LABELS[cfg.mode][r]}</span>
+                      <select
+                        data-testid={`zone-role-${r}`}
+                        value={map[r] || ""}
+                        onChange={(e) => {
+                          const next = { ...map };
+                          const other = Object.keys(next).find((k) => next[k] === e.target.value);
+                          if (other) next[other] = map[r];
+                          next[r] = e.target.value;
+                          set({ zoneRoles: { ...(cfg.zoneRoles || {}), [cfg.mode]: next } });
+                        }}
+                        className="w-28 h-9 rounded-lg bg-[#0B111C] border border-[#1E293B] px-2 text-sm"
+                      >
+                        {defs.map((d) => <option key={d.id} value={d.id}>{`D${d.number}${d.name ? " " + d.name : ""}`}</option>)}
+                      </select>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
           )}
           <div className="space-y-4">
             <Label>Parametri</Label>
@@ -95,6 +139,7 @@ export function DefensePanel({ open, onOpenChange, play, phaseIndex, onConfig, o
             <Switch className="data-[state=unchecked]:bg-slate-600" data-testid="defense-arrows-switch" checked={cfg.arrows} onCheckedChange={(arrows) => set({ arrows })} />
           </label>
           <button data-testid="defense-generate-btn" onClick={onGenerate} className="w-full h-12 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold flex items-center justify-center gap-2 transition-colors"><Wand2 className="w-5 h-5" />Genera difesa</button>
+          <button data-testid="defense-compare-btn" onClick={onCompare} disabled={play.phases.length < 2} className="w-full h-11 rounded-full border border-blue-500/50 text-blue-200 font-semibold flex items-center justify-center gap-2 hover:bg-blue-600/20 disabled:opacity-40"><Columns2 className="w-4 h-4" />Confronta due strategie</button>
           <div>
             <Label>Lettura tattica</Label>
             <Reading play={play} phaseIndex={phaseIndex} />

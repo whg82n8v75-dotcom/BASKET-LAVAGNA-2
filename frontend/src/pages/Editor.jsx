@@ -14,6 +14,7 @@ import { DefensePanel } from "@/components/editor/DefensePanel";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { generateDefense, manualEdits, hasGenerated, DEFAULT_DEFENSE, liveDefensePhase } from "@/lib/defense";
 import { LiveBar } from "@/components/editor/LiveBar";
+import { CompareDialog } from "@/components/editor/CompareDialog";
 
 function Editor({ play }) {
   const { upsertPlay, settings, copyPlay } = usePlays();
@@ -34,6 +35,7 @@ function Editor({ play }) {
   const [videoOpen, setVideoOpen] = useState(false);
   const [defOpen, setDefOpen] = useState(false);
   const [genAsk, setGenAsk] = useState(null);
+  const [compareOpen, setCompareOpen] = useState(false);
   const canvasRef = useRef(null);
   const progressRef = useRef(null);
   const tRef = useRef(0);
@@ -428,7 +430,8 @@ function Editor({ play }) {
         settingsOpen={phaseOpen}
         setSettingsOpen={setPhaseOpen}
       />
-      <DefensePanel open={defOpen} onOpenChange={setDefOpen} play={play} phaseIndex={idx} onConfig={(defense) => live(react({ ...playRef.current, defense }))} onGenerate={onGenerate} />
+      <DefensePanel open={defOpen} onOpenChange={setDefOpen} play={play} phaseIndex={idx} onConfig={(defense) => live(react({ ...playRef.current, defense }))} onGenerate={onGenerate} onCompare={() => { setDefOpen(false); setCompareOpen(true); }} />
+      <CompareDialog open={compareOpen} onOpenChange={setCompareOpen} play={play} />
       <AlertDialog open={!!genAsk} onOpenChange={(o) => !o && setGenAsk(null)}>
         <AlertDialogContent data-testid="generate-confirm-dialog" className="bg-[#131C2E] border-[#1E293B] text-slate-100">
           <AlertDialogHeader>
