@@ -53,13 +53,13 @@ export default function SettingsPage() {
             <Seg testid="setting-size" value={s.playerSize} onChange={(playerSize) => updateSettings({ playerSize })} options={[[0.85, "S"], [1, "M"], [1.2, "L"]]} />
           </Row>
           <Row label="Mostra posizioni della fase precedente" sub="Sagome tratteggiate per orientarsi">
-            <Switch data-testid="setting-ghost" checked={s.ghost} onCheckedChange={(ghost) => updateSettings({ ghost })} />
+            <Switch className="data-[state=unchecked]:bg-slate-600" data-testid="setting-ghost" checked={s.ghost} onCheckedChange={(ghost) => updateSettings({ ghost })} />
           </Row>
           <Row label="Linee visibili durante la riproduzione">
-            <Switch data-testid="setting-lines" checked={s.showLines} onCheckedChange={(showLines) => updateSettings({ showLines })} />
+            <Switch className="data-[state=unchecked]:bg-slate-600" data-testid="setting-lines" checked={s.showLines} onCheckedChange={(showLines) => updateSettings({ showLines })} />
           </Row>
           <Row label="Ripeti in loop di default">
-            <Switch data-testid="setting-loop" checked={s.loop} onCheckedChange={(loop) => updateSettings({ loop })} />
+            <Switch className="data-[state=unchecked]:bg-slate-600" data-testid="setting-loop" checked={s.loop} onCheckedChange={(loop) => updateSettings({ loop })} />
           </Row>
           <div>
             <div className="flex justify-between text-sm mb-2"><span>Durata predefinita di una fase</span><span className="font-mono text-amber-400">{s.duration.toFixed(1)}s</span></div>

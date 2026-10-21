@@ -1,0 +1,41 @@
+{
+  "summary": "Frontend-only E2E test of Basket Tactics Motion (Italian PWA, canvas-based) via Playwright. Covered home navigation, new play dialog, editor (drag, tap->player panel, all 11 tools, linked move/pass auto-phase creation, animation playback & progress bar, undo/redo incl. Ctrl+Z, eraser), timeline (add/settings popover sliders/easing/move/duplicate/delete, speed cycle, next/prev/restart), court half/full, visibility toggles (desktop + mobile menu), editor menu (add players, PNG/sheet/JSON downloads, video recording -> MP4 1.5MB saved), library (16 presets, open copy), My plays (search, category filter, rename, duplicate, export single, delete, export-all, import backup + import single play JSON + invalid JSON error toast), autosave persistence after reload, /cerca?q=pick (both sections populated), settings persistence, PWA manifest/icons/sw registration, responsive iPhone portrait/landscape and iPad. No page errors observed. One real responsive bug found: toolbar overflow on iPhone portrait makes 4 tools unreachable.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Toolbar (iPhone portrait 390x844)", "issue": "Toolbar is 624px wide in a 390px viewport and can NOT be scrolled: the toolbar has `shrink-0` inside a flex row parent (`order-2 min-h-0 flex`), so it grows to content width and its own `overflow-x-auto` never activates (scrollWidth==clientWidth==624, setting scrollLeft stays 0). Parent overflow is visible and editor-page is overflow-hidden, so tools Zona, Area, Simbolo, Gomma (eraser) are cut off and unreachable on phones in portrait. Fix: in portrait make the toolbar shrinkable, e.g. replace `shrink-0` with `portrait:min-w-0 portrait:flex-1 landscape:shrink-0` (or add `w-full min-w-0` to toolbar / `min-w-0 w-full` to parent). Landscape (vertical toolbar) scrolls correctly.", "selector": "[data-testid=editor-toolbar]", "priority": "HIGH"},
+      {"component": "Toolbar iPad portrait 1024x1366", "issue": "Toolbar only 624px wide and left-aligned with an empty dark strip on the right (not full-width/centered). Cosmetic.", "selector": "[data-testid=editor-toolbar]", "priority": "LOW"},
+      {"component": "lib/model.js removePlayer", "issue": "When removing the ball holder, ball falls back to `positions[id]?.x` AFTER `delete positions[id]`, so it is always x=7,y=7.5 instead of the removed player's position.", "selector": "[data-testid=player-remove]", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Erase/delete linked drawing", "issue": "Erasing a linked pass (o1->o3) or move arrow does not revert the derived state in the next phase (ball stays with o3 in phase 2; moved player stays at path end). The animation still happens without the line. Possibly intended, but confusing; consider reverting or informing the user.", "affected_selectors": ["[data-testid=tool-eraser]", "[data-testid=drawing-delete]"]}
+    ],
+    "design_issues": [
+      {"screen": "Settings (/impostazioni)", "issues": ["Switch OFF state is almost invisible (very dark track on dark card) - low contrast for setting-ghost / setting-lines / setting-loop"]},
+      {"screen": "Export video dialog", "issues": ["'Salva / condividi video' button label wraps onto two lines at desktop width", "Copy says Chrome produces WebM but current Chrome produced MP4 (horns.mp4) - text slightly inaccurate"]},
+      {"screen": "Editor", "issues": ["tool-hint banner (4.5s) and tool-options color/symbol bar overlay the court baseline/top area (pointer-events-none, so not blocking)", "After a non-looping playback ends, timeline-progress stays at ~80% (holdStart of last phase) instead of 100%"]},
+      {"screen": "Home", "issues": ["'1 salvati sul dispositivo' - Italian singular/plural not handled ('1 salvato')"]},
+      {"screen": "New play dialog", "issues": ["After selecting another category, previously focused 'Attacco' keeps a brownish highlight that looks semi-selected (focus style), may confuse which category is chosen"]}
+    ]
+  },
+  "test_report_links": ["/app/tests/helpers.js"],
+  "action_items": [
+    "HIGH: Fix editor toolbar overflow in portrait phones so all 11 tools are reachable (horizontal scroll or wrap) - Editor.jsx parent div `order-2 min-h-0 flex` + Toolbar.jsx `shrink-0`",
+    "LOW: removePlayer ball fallback uses deleted position (model.js line ~136) - read position before delete",
+    "LOW: Improve switch OFF contrast in Settings; prevent wrap of 'Salva / condividi video'; fix '1 salvati' plural",
+    "Optional: decide behaviour when a linked move/pass drawing is erased (revert next phase state or notify)"
+  ],
+  "critical_code_review_comments": [
+    "Toolbar.jsx: `shrink-0` on a portrait horizontal toolbar defeats `overflow-x-auto` (root cause of HIGH bug).",
+    "model.js removePlayer: `positions[id]?.x` evaluated after `delete positions[id]`.",
+    "Editor.jsx onPlayPause/onNext logic and phase move/delete bounds are properly guarded (buttons disabled at edges, deletePhase keeps >=1 phase).",
+    "Autosave is debounced 350ms with pagehide/visibilitychange flush - verified working."
+  ],
+  "updated_files": ["/app/tests/helpers.js"],
+  "success_rate": {"backend": "N/A (frontend only)", "frontend": "95%"},
+  "test_credentials": "none - no auth",
+  "seed_data_creation": "Only browser localStorage in ephemeral Playwright contexts (TEST_ prefixed plays); nothing persisted server-side.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Canvas app: /app/tests/helpers.js injects window.__sp(playerId, phaseIdx) -> screen coords of a player (replicates court.js makeView), window.__play() -> current play from localStorage, window.__hash() -> canvas hash for change detection. Load with page.evaluate(open('/app/tests/helpers.js').read()) after navigating to /editor/:id. Clicking an ALREADY active phase chip opens the phase-settings popover which intercepts clicks - press Escape. Mobile dropdown menu stays open after toggling a visibility checkbox item - press Escape. Retest: iPhone portrait toolbar must allow reaching [data-testid=tool-eraser] (check toolbar clientWidth<=390 and scrollable). Not tested: editor-not-found route, settings-clear-btn, persist switch on drawings, real touch gestures."
+}

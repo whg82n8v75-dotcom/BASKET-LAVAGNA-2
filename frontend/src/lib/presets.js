@@ -1,5 +1,6 @@
 import { defaultPlayers, makePhase, hc } from "./model";
 import { HOOP } from "./engine";
+import { generateDefense, DEFAULT_DEFENSE } from "./defense";
 
 const S = {
   top: [0, 9.4], ls: [-2.7, 8.7], rs: [2.7, 8.7], lw: [-5.2, 6.6], rw: [5.2, 6.6], lc: [-6.7, 1.3], rc: [6.7, 1.3],
@@ -37,8 +38,11 @@ function build(spec) {
   const phases = spec.phases.map((ph) => {
     Object.entries(ph.O || {}).forEach(([n, v]) => (O[n] = conv(v)));
     if (ph.ball !== undefined) holder = ph.ball;
-    if (spec.def === "man" || spec.def === "press") D = { ...manDefense(O, holder, spec.def === "press") };
-    Object.entries(ph.D || {}).forEach(([n, v]) => (D[n] = conv(v)));
+    if (ENGINE[spec.def]) D = { ...O };
+    else {
+      if (spec.def === "press") D = { ...manDefense(O, holder, true) };
+      Object.entries(ph.D || {}).forEach(([n, v]) => (D[n] = conv(v)));
+    }
     const positions = {};
     for (let n = 1; n <= 5; n++) {
       positions["o" + n] = { ...O[n] };
@@ -75,11 +79,16 @@ function build(spec) {
   });
   const now = "2026-01-01T00:00:00.000Z";
   const players = defaultPlayers().filter((p) => p.team === "O" || phases[0].positions[p.id]);
-  return {
+  const play = {
     id: spec.id, presetId: spec.id, name: spec.name, category: spec.category, courtMode: spec.world ? "full" : "half", description: spec.desc,
     createdAt: now, updatedAt: now, players, hidden: { O: false, D: !!spec.hideD, ball: false }, phases,
   };
+  if (!ENGINE[spec.def]) return play;
+  const cfg = { ...DEFAULT_DEFENSE, mode: ENGINE[spec.def], strategy: spec.strategy || "over", arrows: !!spec.defArrows, params: { ...DEFAULT_DEFENSE.params, ...(spec.params || {}) } };
+  return generateDefense(play, cfg).play;
 }
+
+const ENGINE = { man: "man", zone23: "zone23", zone32: "zone32" };
 
 const SPECS = [
   {
@@ -212,7 +221,7 @@ const SPECS = [
     ],
   },
   {
-    id: "zone-23", name: "Difesa a zona 2-3", category: "difesa", def: "zone", defArrows: true,
+    id: "zone-23", name: "Difesa a zona 2-3", category: "difesa", def: "zone23", defArrows: true,
     desc: "Due guardie alte, tre giocatori bassi: scivolamenti sulla palla in ala e in angolo.",
     phases: [
       { O: { 1: "top", 2: "lw", 3: "rw", 4: "lc", 5: "rc" }, ball: 1, D: { 1: [-2.2, 7.3], 2: [2.2, 7.3], 3: [-3.6, 3.2], 4: [3.6, 3.2], 5: [0, 2.4] }, zones: [[[0, 4.6], 4.6, 3.4]] },
@@ -223,7 +232,7 @@ const SPECS = [
     ],
   },
   {
-    id: "zone-32", name: "Difesa a zona 3-2", category: "difesa", def: "zone", defArrows: true,
+    id: "zone-32", name: "Difesa a zona 3-2", category: "difesa", def: "zone32", defArrows: true,
     desc: "Tre difensori alti e due bassi: pressione sul perimetro e chiusura dell'angolo dai lunghi.",
     phases: [
       { O: { 1: "top", 2: "lw", 3: "rw", 4: "lc", 5: "rc" }, ball: 1, D: { 1: [0, 8.0], 2: [-4.0, 6.2], 3: [4.0, 6.2], 4: [-2.3, 2.4], 5: [2.3, 2.4] }, zones: [[[0, 5.2], 4.8, 3.6]] },
@@ -242,7 +251,7 @@ const SPECS = [
     ],
   },
   {
-    id: "pnr-defense", name: "Difesa sul pick and roll", category: "difesa", def: "man", defArrows: true,
+    id: "pnr-defense", name: "Difesa sul pick and roll", category: "difesa", def: "man", strategy: "show", defArrows: true,
     desc: "Show/hedge del lungo, il difensore sulla palla passa sopra il blocco e il lungo recupera sul rollante.",
     phases: [
       { O: { 1: "top", 2: "lc", 3: "rc", 4: "lw", 5: "re" }, ball: 1 },
@@ -253,8 +262,34 @@ const SPECS = [
   },
 ];
 
+
+const FIVE_OUT = { 1: "top", 2: "lw", 3: "rw", 4: "lc", 5: "rc" };
+const VS_ZONE = { 1: "top", 2: "lw", 3: "rw", 4: "rc", 5: "lb" };
+const PNR = [
+  { O: { 1: "top", 2: "lc", 3: "rc", 4: "lw", 5: "re" }, ball: 1 },
+  { O: { 5: [0.9, 8.3] }, screens: [5], sym: [["B", [0.9, 7.4]]] },
+  { O: { 1: [3.0, 6.4], 5: [0.6, 2.6], 4: "ls" }, via: { 1: [[1.9, 9.0]], 5: [[-0.6, 5.6]] }, cuts: [5], dur: 1.8 },
+  { ball: 5, dur: 1.0 },
+];
+const T = (id, name, def, phases, desc, extra = {}) => ({ id: "test-" + id, name: "Test · " + name, category: "difesa", def, defArrows: true, desc, phases, ...extra });
+const TESTS = [
+  T("man-top", "Palla in punta vs uomo", "man", [{ O: FIVE_OUT, ball: 1 }, { O: { 1: [1.0, 9.0] } }], "Difensore sulla palla tra uomo e canestro, ali in anticipo, angoli in aiuto."),
+  T("man-wing", "Punta → ala vs uomo", "man", [{ O: FIVE_OUT, ball: 1 }, { ball: 3 }], "Dopo il passaggio all'ala destra: salto verso la palla, lato debole in aiuto."),
+  T("man-drive", "Penetrazione centrale vs uomo", "man", [{ O: FIVE_OUT, ball: 1 }, { O: { 1: [0.3, 3.6] }, dur: 1.3 }, { ball: 4, dur: 1.0 }, { O: { 1: "top" }, dur: 1.4 }], "Penetrazione: aiuto dal lato debole, rotazione, scarico e recupero (closeout)."),
+  T("z23-top", "Palla in punta vs 2-3", "zone23", [{ O: VS_ZONE, ball: 1 }, { O: { 1: [0.8, 9.2] } }], "Prima linea sulla palla, seconda linea su area, post e tagli."),
+  T("z23-wing", "Punta → ala vs 2-3", "zone23", [{ O: VS_ZONE, ball: 1 }, { ball: 3 }], "Traslazione coordinata della zona sul lato destro."),
+  T("z23-corner", "Passaggio in angolo vs 2-3", "zone23", [{ O: VS_ZONE, ball: 1 }, { ball: 3 }, { ball: 4 }], "Uscita della seconda linea sul tiratore in angolo e rotazioni."),
+  T("z23-swing", "Circolazione lato-lato vs 2-3", "zone23", [{ O: { ...VS_ZONE, 4: "lc", 5: "rc" }, ball: 1 }, { ball: 2 }, { ball: 4 }, { ball: 2 }, { ball: 1 }, { ball: 3 }, { ball: 5 }], "La zona segue la palla da sinistra a destra, angolo compreso."),
+  T("z32-corner", "Passaggio in angolo vs 3-2", "zone32", [{ O: FIVE_OUT, ball: 1 }, { ball: 2 }, { ball: 4 }], "Il basso lato forte esce sull'angolo, gli altri ruotano."),
+  T("z32-drive", "Penetrazione vs 3-2", "zone32", [{ O: FIVE_OUT, ball: 1 }, { ball: 3 }, { O: { 3: [1.5, 3.0] }, dur: 1.2 }, { ball: 5, dur: 1.0 }], "Penetrazione dall'ala: i bassi proteggono il ferro, poi scarico in angolo."),
+  T("pnr-over", "Pick and roll vs uomo: sopra il blocco", "man", PNR, "Strategia: passaggio sopra il blocco.", { strategy: "over" }),
+  T("pnr-show", "Pick and roll vs uomo: show e recupero", "man", PNR, "Strategia: show del lungo e recupero.", { strategy: "show" }),
+  T("pnr-switch", "Pick and roll vs uomo: cambio", "man", PNR, "Strategia: cambio difensivo.", { strategy: "switch" }),
+  T("pnr-drop", "Pick and roll vs uomo: drop", "man", PNR, "Strategia: contenimento del lungo.", { strategy: "contain" }),
+];
+
 let cache = null;
 export function getPresets() {
-  if (!cache) cache = SPECS.map(build);
+  if (!cache) cache = [...SPECS, ...TESTS].map(build);
   return cache;
 }

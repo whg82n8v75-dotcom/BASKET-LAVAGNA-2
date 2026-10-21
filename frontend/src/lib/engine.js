@@ -115,13 +115,20 @@ export function frameAt(play, tl, T, showLines = true) {
   }
   const A = play.phases[seg.from], B = play.phases[seg.to];
   const u = clamp((T - seg.start) / seg.dur, 0, 1);
-  const e = (EASINGS[B.easing] || EASINGS.easeInOut)(u);
+  const e0 = (EASINGS[B.easing] || EASINGS.easeInOut)(u);
+  const e = e0;
   const paths = {};
   A.drawings.forEach((d) => {
     if (d.playerId && PATH_TYPES.includes(d.type) && d.points.length > 1) paths[d.playerId] = sampled(d);
   });
   const positions = {};
+  const dp = play.defense?.params;
+  const defIds = dp ? new Set(play.players.filter((p) => p.team === "D").map((p) => p.id)) : null;
+  const delay = dp ? 0.35 * dp.reaction : 0;
+  const span = dp ? (1 - delay) * (1 - 0.4 * dp.rotSpeed) : 1;
+  const eD = dp ? (EASINGS[B.easing] || EASINGS.easeInOut)(clamp((u - delay) / span, 0, 1)) : e;
   for (const pid of Object.keys({ ...A.positions, ...B.positions })) {
+    const e = defIds?.has(pid) ? eD : e0;
     const a = A.positions[pid] || B.positions[pid], b = B.positions[pid] || a;
     const path = paths[pid];
     if (path) {

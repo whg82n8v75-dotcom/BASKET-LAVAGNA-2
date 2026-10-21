@@ -132,8 +132,9 @@ export function removePlayer(play, id) {
     players: play.players.filter((p) => p.id !== id),
     phases: play.phases.map((ph) => {
       const positions = { ...ph.positions };
+      const old = positions[id];
       delete positions[id];
-      const ball = ph.ball?.holder === id ? { holder: null, x: positions[id]?.x ?? 7, y: 7.5 } : ph.ball;
+      const ball = ph.ball?.holder === id ? { holder: null, x: old?.x ?? 7, y: old?.y ?? 7.5 } : ph.ball;
       return { ...ph, positions, ball, drawings: ph.drawings.filter((d) => d.playerId !== id && d.fromId !== id && d.toId !== id) };
     }),
   };

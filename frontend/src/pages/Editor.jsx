@@ -10,6 +10,9 @@ import { Timeline } from "@/components/editor/Timeline";
 import { PlayerPanel, DrawingPanel, ToolOptions } from "@/components/editor/Panels";
 import { EditorTopBar } from "@/components/editor/EditorTopBar";
 import { ExportVideoDialog } from "@/components/editor/ExportVideoDialog";
+import { DefensePanel } from "@/components/editor/DefensePanel";
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { generateDefense, manualEdits, hasGenerated, DEFAULT_DEFENSE } from "@/lib/defense";
 
 function Editor({ play }) {
   const { upsertPlay, settings, copyPlay } = usePlays();
@@ -28,6 +31,8 @@ function Editor({ play }) {
   const [phaseOpen, setPhaseOpen] = useState(false);
   const [hint, setHint] = useState(null);
   const [videoOpen, setVideoOpen] = useState(false);
+  const [defOpen, setDefOpen] = useState(false);
+  const [genAsk, setGenAsk] = useState(null);
   const canvasRef = useRef(null);
   const progressRef = useRef(null);
   const tRef = useRef(0);
@@ -77,7 +82,7 @@ function Editor({ play }) {
   }, []);
 
   useEffect(() => {
-    if (!playing) setProgress(holdStart(tl, idx));
+    if (!playing) setProgress(idx === play.phases.length - 1 && tRef.current >= tl.total - 0.01 ? tl.total : holdStart(tl, idx));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idx, tl, playing]);
 
@@ -236,6 +241,28 @@ function Editor({ play }) {
     toast(`Fase ${idx + 2} creata: sposta i giocatori nelle nuove posizioni`, { duration: 1800 });
   };
 
+  const runGenerate = (choice) => {
+    const cfg = playRef.current.defense || DEFAULT_DEFENSE;
+    setGenAsk(null);
+    exitPlayback();
+    if (choice === "copy") {
+      const c = copyPlay(playRef.current, `${playRef.current.name} (difesa generata)`);
+      upsertPlay(generateDefense(c, cfg).play);
+      toast.success("Copia creata con la difesa generata");
+      navigate(`/editor/${c.id}`);
+      return;
+    }
+    const keep = choice === "keep" ? manualEdits(playRef.current) : {};
+    commit(generateDefense(playRef.current, cfg, { keep }).play);
+    toast.success(choice === "keep" ? "Difesa generata (modifiche manuali mantenute)" : "Difesa generata per tutte le fasi");
+  };
+  const onGenerate = () => {
+    const edits = Object.keys(manualEdits(play)).length;
+    const fresh = !hasGenerated(play) && play.players.some((p) => p.team === "D");
+    if (edits || fresh) setGenAsk({ edits, fresh });
+    else runGenerate("overwrite");
+  };
+
   const addPlayer = (team) => {
     const { play: np, id } = M.addPlayer(play, team, idx);
     commit(np);
@@ -286,6 +313,11 @@ function Editor({ play }) {
           setVideoOpen(true);
         }}
         phaseIndex={idx}
+        onOpenDefense={() => {
+          exitPlayback();
+          setSel(null);
+          setDefOpen(true);
+        }}
         onDuplicatePlay={() => {
           const c = copyPlay(play, `${play.name} (copia)`);
           toast.success("Schema duplicato");
@@ -320,11 +352,16 @@ function Editor({ play }) {
               onClose={() => setSel(null)}
             />
           )}
+          {play.phases[idx]?.defInfo && !hint && (
+            <div data-testid="defense-reading-chip" className="absolute left-2 bottom-2 z-10 pointer-events-none max-w-[calc(100%-16px)] truncate text-[11px] font-semibold text-blue-200 bg-[#090D14]/80 backdrop-blur rounded-full px-3 py-1.5 border border-blue-900/60">
+              {play.defense?.mode === "man" ? "Uomo" : play.defense?.mode === "zone23" ? "Zona 2-3" : "Zona 3-2"} · palla: {play.phases[idx].defInfo.label}
+            </div>
+          )}
           {hint && !playing && (
             <div data-testid="tool-hint" className="absolute left-2 right-2 bottom-2 z-10 pointer-events-none text-[12px] text-slate-100 bg-[#090D14]/80 backdrop-blur rounded-xl px-3 py-2 border border-[#1E293B] animate-in fade-in duration-200">{hint}</div>
           )}
         </div>
-        <div className="order-2 landscape:order-1 min-h-0 flex">
+        <div className="order-2 landscape:order-1 min-h-0 min-w-0 flex">
           <Toolbar tool={tool} setTool={setTool} />
         </div>
       </div>
@@ -350,6 +387,25 @@ function Editor({ play }) {
         settingsOpen={phaseOpen}
         setSettingsOpen={setPhaseOpen}
       />
+      <DefensePanel open={defOpen} onOpenChange={setDefOpen} play={play} phaseIndex={idx} onConfig={(defense) => live({ ...playRef.current, defense })} onGenerate={onGenerate} />
+      <AlertDialog open={!!genAsk} onOpenChange={(o) => !o && setGenAsk(null)}>
+        <AlertDialogContent data-testid="generate-confirm-dialog" className="bg-[#131C2E] border-[#1E293B] text-slate-100">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Generare la difesa?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
+              {genAsk?.edits ? `Hai modificato a mano i difensori in ${genAsk.edits} fase/i dopo l'ultima generazione.` : "Le posizioni attuali dei difensori in tutte le fasi verranno sostituite."} Scegli come procedere.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid gap-2">
+            {genAsk?.edits > 0 && <button data-testid="generate-keep-btn" onClick={() => runGenerate("keep")} className="h-11 rounded-full bg-emerald-600 text-white font-semibold">Genera mantenendo le modifiche manuali</button>}
+            <button data-testid="generate-copy-btn" onClick={() => runGenerate("copy")} className="h-11 rounded-full border border-[#334155] font-semibold hover:bg-[#1A263D]">Crea una copia con la nuova difesa</button>
+            <button data-testid="generate-overwrite-btn" onClick={() => runGenerate("overwrite")} className="h-11 rounded-full bg-blue-600 text-white font-semibold">Sovrascrivi i difensori</button>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="generate-cancel-btn" className="bg-transparent border-[#334155] text-slate-200 hover:bg-[#1A263D] hover:text-white">Annulla</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <ExportVideoDialog open={videoOpen} onOpenChange={setVideoOpen} play={play} speed={speed} size={settings.playerSize} />
     </div>
   );

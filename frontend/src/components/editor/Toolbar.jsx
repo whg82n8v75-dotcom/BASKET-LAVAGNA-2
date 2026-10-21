@@ -17,7 +17,7 @@ export const TOOLS = [
 
 export function Toolbar({ tool, setTool }) {
   return (
-    <div data-testid="editor-toolbar" className="flex landscape:flex-col gap-1 p-1.5 overflow-x-auto landscape:overflow-y-auto no-scrollbar bg-[#0E1522] border-[#1E293B] portrait:border-t landscape:border-r shrink-0">
+    <div data-testid="editor-toolbar" className="flex landscape:flex-col gap-1 p-1.5 overflow-x-auto landscape:overflow-y-auto no-scrollbar bg-[#0E1522] border-[#1E293B] portrait:border-t landscape:border-r portrait:flex-1 portrait:min-w-0 portrait:justify-between landscape:shrink-0">
       {TOOLS.map((t) => {
         const active = tool === t.id;
         return (

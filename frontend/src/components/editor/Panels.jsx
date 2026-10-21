@@ -53,7 +53,7 @@ export function DrawingPanel({ drawing, onChange, onDelete, onClose }) {
       {drawing.playerId && <div className="text-xs text-emerald-400">Collegata al movimento animato del giocatore</div>}
       <label className="flex items-center justify-between gap-3 text-sm">
         <span>Mantieni visibile nelle fasi successive</span>
-        <Switch data-testid="drawing-persist-switch" checked={!!drawing.persist} onCheckedChange={(persist) => onChange({ persist })} />
+        <Switch className="data-[state=unchecked]:bg-slate-600" data-testid="drawing-persist-switch" checked={!!drawing.persist} onCheckedChange={(persist) => onChange({ persist })} />
       </label>
       {drawing.type !== "symbol" && <Swatches colors={DRAW_COLORS} value={drawing.color} onPick={(color) => onChange({ color })} prefix="drawing-color" />}
       <button data-testid="drawing-delete" onClick={onDelete} className="w-full h-10 rounded-lg border border-red-900/60 text-red-400 text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-red-950/40"><Trash2 className="w-4 h-4" />Elimina</button>
