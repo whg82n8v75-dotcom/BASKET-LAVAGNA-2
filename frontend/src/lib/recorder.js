@@ -4,7 +4,7 @@ import { buildTimeline, frameAt, phaseScene } from "./engine";
 
 export function pickMime() {
   if (typeof MediaRecorder === "undefined") return null;
-  const list = ["video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
+  const list = ["video/mp4;codecs=avc1", "video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4"];
   return list.find((m) => MediaRecorder.isTypeSupported?.(m)) || null;
 }
 

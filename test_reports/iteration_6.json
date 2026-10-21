@@ -1,0 +1,30 @@
+{
+  "summary": "Iteration 6, frontend only, run with Playwright Chromium at 1920x1080 plus a 390x844 check. Every requested flow passed, with no console or page errors. (1) In test-pnr-switch at Fase 3, defense-reading contains '⚠ Mismatch dopo il cambio: D1 (esterno) su A5 (lungo)' and '⚠ Mismatch fisico: D1 (esterno) marca A5 (lungo)' plus 'Mismatch di velocità: D5 (lungo) marca A1 (esterno)'. phases[2].defInfo.mismatches = [{d1,o5,size},{d5,o1,speed}]. On the canvas, D1 has a red '!' triangle and D5 has an orange one. (2) Setting o5 to player-size-G and regenerating removes the d1/o5 mismatch; only the d5/o1 speed mismatch is left. generate-overwrite-btn never appeared. (3) Selective with default sizes gives 'Cambio selettivo: il cambio lascerebbe D5 (lungo) su A1 (esterno) e D1 (esterno) su A5 (lungo) → niente cambio, passaggio sopra il blocco'. With o5=F and d5=F it gives '... → taglie compatibili, cambio' plus 'Cambio: D5 prende la palla...', with mismatches []. (4) Compare: compare-video-export shows 'Registrazione 25%' and then '68%', after which compare-video-save 'Salva video (MP4)' appears. The download was test-pick-and-roll-vs-uomo-cambio-confronto.mp4 at 1.1MB. Loaded back into a <video>, it is 1780x926 and 6.9s with a finite duration. A frame grab shows both panes side by side with headers 'A · UOMO · CAMBIO DIFENSIVO' / 'B · ...', the mismatch badges and a footer note. Changing compare-select-a resets the button to 'Esporta video confronto' and removes the save button. Changing a select during recording aborts cleanly back to idle, with no error and no stray save button. (5) In compare playback, pane A (switch) shows the red and orange badges and pane B (over) shows none. (6) Regression: timeline-play animates (5 distinct canvas hashes), and with live ON a drag of o1 repositions d1, d2, d3 and d5. On mobile 390x844 the compare selects are full width and the export button fits.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Compare video export format", "issue": "pickMime() tries 'video/mp4' before webm. Current Chrome supports MP4 recording, so Chrome produces MP4, not WebM as the spec says. In Playwright Chromium, which has no H.264, it fell back to 'video/mp4' with a VP9 track (vp09 box found in the file). A VP9-in-MP4 file may not play in QuickTime or on older players. Suggestion: accept 'video/mp4' only when 'video/mp4;codecs=avc1' is supported, and otherwise prefer webm. This also affects recordPlay.", "affected_selectors": ["[data-testid=compare-video-save]"]}
+    ],
+    "design_issues": [
+      {"screen": "Defense reading Fase 3 (switch)", "issues": ["The notes say the same thing twice: '⚠ Mismatch dopo il cambio: D1 su A5' and then '⚠ Mismatch fisico: D1 marca A5'. Consider dropping the pickStrat note when the end-of-phase mismatch list already covers it.", "Fase 2 already shows '⚠ Mismatch dopo il cambio' even though defInfo.mismatches is still empty there (the switch is anticipated at screen set). This is acceptable but may confuse."]}
+    ]
+  },
+  "test_report_links": ["/app/tests/helpers.js"],
+  "action_items": [
+    "LOW: In pickMime, prefer webm unless 'video/mp4;codecs=avc1' is supported, to avoid VP9-in-MP4 files and to match the 'webm on Chrome' spec",
+    "LOW: Remove the duplicate mismatch note in switch mode (pickStrat warning vs the final mismatch list)"
+  ],
+  "critical_code_review_comments": [
+    "In recorder.js, recordCompare starts with pickMime() and the first preference is plain 'video/mp4', which does not pin a codec.",
+    "In CompareDialog, the export button is disabled when !pickMime(), so on unsupported browsers the user gets no explanation. compare-video-error is only shown after a failed attempt. Consider a tooltip.",
+    "In recordCompare, the note text is truncated with slice(0,92) without an ellipsis."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend only)", "frontend": "100% of the requested flows (with 1 minor format deviation)"},
+  "test_credentials": "none required",
+  "seed_data_creation": "Library preset copies only, in ephemeral browser localStorage",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Navigate to /libreria, then preset-open-test-pnr-switch (ids o1..o5, d1..d5; 4 phases; mismatches at phases 2 and 3). Inject /app/tests/helpers.js. To change a size: select the phase chip, click the player at __sp(id,phase), then player-size-G/F/C, then player-panel-close. To capture the downloaded blob, monkeypatch URL.createObjectURL before clicking compare-video-save, then load it into a <video>."
+}

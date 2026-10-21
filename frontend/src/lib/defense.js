@@ -197,14 +197,14 @@ function manPhase(ctx) {
     else normal[d] = manOff(A, ballN, info, prm, ev.cuts.has(man));
   });
   Object.assign(out, normal);
-  const pickStrat = (dS, dT, sc) => {
+  const pickStrat = (dS, dT, sc, isSet) => {
     const tol = cfg.switchTol ?? 1;
     const z = (id) => sizeOf(play.players.find((x) => x.id === id));
     const lab = (id) => `${short(play, id)} (${SIZES[z(id)].toLowerCase()})`;
     const pairs = [[dS, sc.T], [dT, sc.S]];
     const bad = pairs.filter(([d, o]) => Math.abs(RANK[z(o)] - RANK[z(d)]) > tol);
     const small = pairs.filter(([d, o]) => RANK[z(o)] - RANK[z(d)] > tol);
-    if (cfg.strategy === "switch" && small.length) small.forEach(([d, o]) => notes.push(`⚠ Mismatch dopo il cambio: ${lab(d)} su ${lab(o)}`));
+    if (cfg.strategy === "switch" && isSet && small.length) small.forEach(([d, o]) => notes.push(`Attenzione: il cambio creerà un mismatch (${lab(d)} su ${lab(o)})`));
     if (cfg.strategy !== "selective") return cfg.strategy;
     const alt = cfg.mismatch || "over";
     const ok = !bad.length;
@@ -215,7 +215,7 @@ function manPhase(ctx) {
   ev.screensSet.forEach((sc) => {
     const dS = defs.find((x) => state.assign[x] === sc.S), dT = defs.find((x) => state.assign[x] === sc.T);
     if (!dS || !dT) return;
-    const strat = pickStrat(dS, dT, sc);
+    const strat = pickStrat(dS, dT, sc, true);
     const S = nPos(sc.S), T = nPos(sc.T);
     notes.push(`Blocco di ${short(play, sc.S)} per ${short(play, sc.T)}${sc.ball ? " (sulla palla)" : ""}: ${STRATEGIES[strat]}`);
     if (!sc.ball) return;

@@ -17,6 +17,8 @@ PWA in italiano per allenatori di basket: lavagna tattica animata (fasi/timeline
 - 2026-06 v4: anteprima rotazioni (sagome destinazione), spinta fondo/centro, cambio predefinito a uomo, zona immobile sui blocchi.
 - 2026-06 v5: Confronto strategie affiancato (CompareDialog), Cambio selettivo per taglia (Esterno/Ala/Lungo, tolleranza, strategia alternativa), ruoli zona personalizzati con scambio.
 
+- 2026-06 v6: taglie anche per gli attaccanti, rilevamento mismatch (fisico/velocità) con badge e note, cambio selettivo basato sui nuovi accoppiamenti; export video del confronto affiancato (recordCompare); preferenza MP4 H.264, altrimenti WebM.
+
 ## Limiti dichiarati
 - Pressing a tutto campo non gestito dal motore (preset manuale). GIF non disponibile.
 - Zone: nessun raddoppio/trap esplicito; ruoli zona assegnati per numero.
