@@ -499,24 +499,28 @@ function runEngine(play, cfg, upto = play.phases.length - 1, sticky = null) {
       if (nearest && !(info.zone === "top" && info.side === 0 && cfg.mode === "zone23")) notes.push(`Sulla palla: ${short(play, nearest)} (${ROLE_LABELS[cfg.mode][roles[nearest]]})`);
       Object.entries(roles).forEach(([d, r]) => notes.push(`${short(play, d)}: ${ROLE_LABELS[cfg.mode][r]}`));
     }
+    const prevPh = play.phases[k - 1];
+    const stuckPos = (d) => fr.toN(prevPh?.positions[d] || ph.positions[d]);
     if (pnr) {
       const T = fr.toN(ph.positions[pnr.T]), S = fr.toN(ph.positions[pnr.S]);
       [["B", pnr.dB, pnr.aB], ["S", pnr.dS, pnr.aS]].forEach(([role, d, a]) => {
-        outN[d] = a === "manual" ? fr.toN(ph.positions[d]) : pnrSpot(role, a, T, S, prm);
+        outN[d] = a === "manual" ? fr.toN(ph.positions[d]) : a === "stuck" ? stuckPos(d) : pnrSpot(role, a, T, S, prm);
         notes.push(`${short(play, d)} (${role === "B" ? "sulla palla" : "sul bloccante"}): ${COVERAGES[a]} — ${COV_DESC[role][a]}`);
       });
     }
     offSc.forEach((o) => {
       const C = fr.toN(ph.positions[o.C]), S = fr.toN(ph.positions[o.S]);
-      const e = exitDir(o.kind, C, S, ballN);
+      const e = readExit(o.exit, o.kind, C, S, ballN);
       [["C", o.dC, o.aC], ["S", o.dS, o.aS]].forEach(([role, d, a]) => {
-        outN[d] = a === "manual" ? fr.toN(ph.positions[d]) : offSpot(role, a, C, S, e, ballN, info, prm);
-        notes.push(`${short(play, d)} (${role === "C" ? "sul tagliatore" : "sul bloccante"}, ${OFF_KINDS[o.kind]}): ${OFF_COV[role][a]} — ${OFF_DESC[role][a]}`);
+        const r = role === "C" && a === "react" ? REACT[o.exit] || "trail" : a;
+        outN[d] = r === "manual" ? fr.toN(ph.positions[d]) : r === "stuck" ? stuckPos(d) : offSpot(role, r, C, S, e, ballN, info, prm);
+        notes.push(`${short(play, d)} (${role === "C" ? "sul tagliatore" : "sul bloccante"}, ${OFF_KINDS[o.kind]}${o.exit && o.exit !== "auto" ? ` · ${EXITS[o.exit]}` : ""}): ${OFF_COV[role][a]} — ${a === "react" ? `${EXITS[o.exit] || "uscita dritta"} → ${REACT_DESC[o.exit] || REACT_DESC.auto}` : OFF_DESC[role][a]}`);
       });
     });
     separate(outN, cfg.mode === "man" ? 1.0 : 1.4);
-    if (pnr) [[pnr.dB, pnr.aB], [pnr.dS, pnr.aS]].forEach(([d, a]) => a === "manual" && (outN[d] = fr.toN(ph.positions[d])));
-    offSc.forEach((o) => [[o.dC, o.aC], [o.dS, o.aS]].forEach(([d, a]) => a === "manual" && (outN[d] = fr.toN(ph.positions[d]))));
+    const fixed = (d, a) => (a === "manual" ? (outN[d] = fr.toN(ph.positions[d])) : a === "stuck" ? (outN[d] = stuckPos(d)) : null);
+    if (pnr) [[pnr.dB, pnr.aB], [pnr.dS, pnr.aS]].forEach(([d, a]) => fixed(d, a));
+    offSc.forEach((o) => [[o.dC, o.aC], [o.dS, o.aS]].forEach(([d, a]) => fixed(d, a)));
     const mismatches = [];
     if (cfg.mode === "man")
       Object.entries(state.assign).forEach(([d, o]) => {
@@ -625,15 +629,15 @@ export function zoneRoleMap(play, mode, cfg = {}) {
 }
 export { ROLE_ORDER };
 
-export const COVERAGES = { over: "Over", under: "Under", switch: "Switch", show: "Show/Hedge", trap: "Trap/Blitz", drop: "Drop", ice: "ICE/Down", contain: "Contenimento", recover: "Recupero e rientro", manual: "Movimento manuale" };
+export const COVERAGES = { stuck: "Si stampa sul blocco", over: "Over", under: "Under", switch: "Switch", show: "Show/Hedge", trap: "Trap/Blitz", drop: "Drop", ice: "ICE/Down", contain: "Contenimento", recover: "Recupero e rientro", manual: "Movimento manuale" };
 const COV_DESC = {
   B: {
-    over: "passa sopra il blocco, attaccato all'anca del palleggiatore", under: "passa sotto il blocco, tra bloccante e canestro", switch: "cambia e prende il bloccante",
+    stuck: "resta fermo, stampato sul blocco: il palleggiatore esce libero", over: "passa sopra il blocco, attaccato all'anca del palleggiatore", under: "passa sotto il blocco, tra bloccante e canestro", switch: "cambia e prende il bloccante",
     show: "sale aggressivo sul lato del blocco", trap: "raddoppia il palleggiatore insieme al lungo", drop: "arretra e concede il tiro dal palleggio", ice: "si mette sul lato del blocco e spinge lontano dal blocco",
     contain: "contiene a distanza tra palla e canestro", recover: "rientra sul proprio uomo (palleggiatore)", manual: "posizione decisa dall'allenatore",
   },
   S: {
-    over: "sale al livello del blocco, sopra il bloccante", under: "si stacca sotto il bloccante per far passare il compagno", switch: "cambia e prende il palleggiatore",
+    stuck: "resta fermo dov'era", over: "sale al livello del blocco, sopra il bloccante", under: "si stacca sotto il bloccante per far passare il compagno", switch: "cambia e prende il palleggiatore",
     show: "esce davanti alla palla per rallentarla", trap: "esce in raddoppio sul palleggiatore", drop: "arretra in area tra palla e ferro", ice: "scende verso il fondo sul lato in cui viene spinta la palla",
     contain: "contenimento morbido a metà strada tra palla e rollante", recover: "rientra sul bloccante, tra lui e il canestro", manual: "posizione decisa dall'allenatore",
   },
@@ -721,11 +725,12 @@ export function applyPnr(play, k, cfg, which = ["B", "S"]) {
 
 export const OFF_KINDS = { pin: "Pin-down", flare: "Flare", back: "Back screen", cross: "Cross screen", other: "Altro blocco" };
 export const OFF_COV = {
-  C: { trail: "Trail (insegue)", toplock: "Top lock", under: "Passa sotto", switch: "Switch", deny: "Anticipo", recover: "Recupero e rientro", manual: "Movimento manuale" },
+  C: { react: "Legge l'uscita", stuck: "Si stampa sul blocco", trail: "Trail (insegue)", toplock: "Top lock", under: "Passa sotto", switch: "Switch", deny: "Anticipo", recover: "Recupero e rientro", manual: "Movimento manuale" },
   S: { bump: "Bump / Show", switch: "Switch", stay: "Resta sul bloccante", help: "Aiuto sul taglio", open: "Si stacca (fa passare)", recover: "Recupero e rientro", manual: "Movimento manuale" },
 };
 export const OFF_DESC = {
   C: {
+    react: "reagisce alla lettura del tagliatore", stuck: "resta fermo, stampato sul blocco: il tagliatore esce libero",
     trail: "segue il tagliatore attraverso il blocco, attaccato alla sua anca", toplock: "si mette sul lato dell'uscita e nega il blocco, spingendo verso il taglio backdoor",
     under: "taglia la strada sotto il blocco per anticipare l'uscita", switch: "cambia e prende il bloccante", deny: "anticipa la linea di passaggio tra palla e tagliatore",
     recover: "rientra sul proprio uomo nella posizione palla-uomo", manual: "posizione decisa dall'allenatore",
@@ -736,7 +741,22 @@ export const OFF_DESC = {
     recover: "rientra sul bloccante, tra lui e il canestro", manual: "posizione decisa dall'allenatore",
   },
 };
-export const OFF_SHORT = { trail: "TRAIL", toplock: "TOP LOCK", under: "SOTTO", switch: "SWITCH", deny: "ANTICIPO", recover: "RECUPERO", manual: "MANUALE", bump: "BUMP", stay: "RESTA", help: "AIUTO", open: "APRE" };
+export const OFF_SHORT = { react: "LEGGE", stuck: "STAMPATO", trail: "TRAIL", toplock: "TOP LOCK", under: "SOTTO", switch: "SWITCH", deny: "ANTICIPO", recover: "RECUPERO", manual: "MANUALE", bump: "BUMP", stay: "RESTA", help: "AIUTO", open: "APRE" };
+
+export const EXITS = { auto: "Uscita dritta", curl: "Curl", fade: "Fade", backdoor: "Backdoor" };
+const REACT = { auto: "trail", curl: "trail", fade: "under", backdoor: "backdoor" };
+const REACT_DESC = {
+  auto: "insegue attaccato (trail)", curl: "insegue stretto all'interno del curl, il compagno aiuta sul ferro",
+  fade: "taglia sotto il blocco verso la zona del fade per contestare il tiro", backdoor: "si gira e chiude la linea verso il ferro",
+};
+
+function readExit(exit, kind, C, S, ball) {
+  const sg = Math.sign(S.lat) || Math.sign(C.lat) || 1;
+  if (exit === "curl") return norm(add(norm(sub(HOOP, S)), P(-sg * 0.6, 0)));
+  if (exit === "fade") return norm(P(sg, -0.4));
+  if (exit === "backdoor") return norm(sub(HOOP, C));
+  return exitDir(kind, C, S, ball);
+}
 
 function exitDir(kind, C, S, ball) {
   const up = norm(sub(S, HOOP));
@@ -757,6 +777,7 @@ function offSpot(role, a, C, S, e, ball, info, prm) {
       case "under": return add(add(S, mul(toH(S), 1.1)), mul(e, 1.0));
       case "switch": return toward(S, HOOP, 1.0);
       case "deny": return add(C, mul(norm(sub(ball, C)), 0.9));
+      case "backdoor": return add(toward(C, HOOP, 0.9), mul(e, 0.6));
       default: return manOff(C, ball, info, prm, false);
     }
   }
@@ -773,7 +794,7 @@ function offSpot(role, a, C, S, e, ball, info, prm) {
 function offValid(play, ph) {
   return (ph.offScreens || [])
     .filter((c) => c && c.S && c.C && c.dC && c.dS && c.S !== c.C && c.dC !== c.dS && [c.S, c.C, c.dC, c.dS].every((id) => ph.positions[id] && play.players.some((p) => p.id === id)))
-    .map((c) => ({ ...c, kind: OFF_KINDS[c.kind] ? c.kind : "other", aC: OFF_COV.C[c.aC] ? c.aC : "trail", aS: OFF_COV.S[c.aS] ? c.aS : "stay" }));
+    .map((c) => ({ ...c, kind: OFF_KINDS[c.kind] ? c.kind : "other", aC: OFF_COV.C[c.aC] ? c.aC : "trail", aS: OFF_COV.S[c.aS] ? c.aS : "stay", exit: EXITS[c.exit] ? c.exit : "auto" }));
 }
 
 export function guessKind(C, S, ball) {
@@ -803,5 +824,5 @@ export function detectOffScreen(play, k, cfg) {
   }
   const ballN = holder && ph.positions[holder] ? fr.toN(ph.positions[holder]) : fr.toN({ x: ph.ball?.x ?? 7, y: ph.ball?.y ?? 7.5 });
   const kind = S && C ? guessKind(fr.toN(ph.positions[C]), fr.toN(ph.positions[S]), ballN) : "other";
-  return { id: Math.random().toString(36).slice(2, 8), kind, S, C, dC: defOf(C), dS: defOf(S), aC: "trail", aS: "stay" };
+  return { id: Math.random().toString(36).slice(2, 8), kind, exit: "auto", S, C, dC: defOf(C), dS: defOf(S), aC: "trail", aS: "stay" };
 }

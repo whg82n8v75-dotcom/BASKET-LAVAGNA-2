@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { X, ChevronLeft, ChevronRight, Plus, Copy, ScanSearch, RotateCcw, Trash2 } from "lucide-react";
-import { COVERAGES, COV_DESC, OFF_KINDS, OFF_COV, OFF_DESC, OFF_SHORT } from "@/lib/defense";
+import { COVERAGES, COV_DESC, OFF_KINDS, OFF_COV, OFF_DESC, OFF_SHORT, EXITS } from "@/lib/defense";
 
-const SHORT = { over: "OVER", under: "UNDER", switch: "SWITCH", show: "SHOW", trap: "TRAP", drop: "DROP", ice: "ICE", contain: "CONTIENI", recover: "RECUPERO", manual: "MANUALE" };
+const SHORT = { stuck: "STAMPATO", over: "OVER", under: "UNDER", switch: "SWITCH", show: "SHOW", trap: "TRAP", drop: "DROP", ice: "ICE", contain: "CONTIENI", recover: "RECUPERO", manual: "MANUALE" };
 export const covTags = (ph) => {
   const out = {};
   const c = ph?.pnr;
@@ -54,6 +54,14 @@ function OffScreen({ play, o, i, offs, defs, onSet, onReapply, onRemove }) {
           {Object.entries(OFF_KINDS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
       </label>
+      <div>
+        <div className="text-[11px] text-slate-400 mb-0.5">Lettura del tagliatore</div>
+        <div className="grid grid-cols-4 gap-1" data-testid={`${t}-exit`}>
+          {Object.entries(EXITS).map(([k, l]) => (
+            <button key={k} data-testid={`${t}-exit-${k}`} onClick={() => onSet({ exit: k }, [o.dC, o.dS])} className={`h-8 rounded-lg text-[11px] font-semibold border ${(o.exit || "auto") === k ? "bg-amber-500 text-[#090D14] border-amber-500" : "border-[#1E293B] text-slate-300"}`}>{k === "auto" ? "Dritta" : l}</button>
+          ))}
+        </div>
+      </div>
       <div className="grid grid-cols-2 gap-2">
         <Pick label="Bloccante" testid={`${t}-screener`} value={o.S} options={offs} play={play} onChange={(S) => onSet({ S })} />
         <Pick label="Tagliatore" testid={`${t}-cutter`} value={o.C} options={offs} play={play} onChange={(C) => onSet({ C })} />
@@ -61,7 +69,7 @@ function OffScreen({ play, o, i, offs, defs, onSet, onReapply, onRemove }) {
         <Pick label="Difensore del bloccante" testid={`${t}-screen-def`} value={o.dS} options={defs} play={play} onChange={(dS) => onSet({ dS })} />
       </div>
       {(!o.S || !o.C || !o.dC || !o.dS) && <p className="text-xs text-amber-300">Completa i quattro giocatori per applicare le coperture.</p>}
-      <CovGroup prefix={t} title={`${lab(play, o.dC)} · sul tagliatore`} role="cutter" value={o.aC} options={OFF_COV.C} desc={OFF_DESC.C} onPick={(aC) => onSet({ aC }, [o.dC])} />
+      <CovGroup prefix={t} title={`${lab(play, o.dC)} · sul tagliatore`} role="cutter" value={o.aC} options={OFF_COV.C} desc={OFF_DESC.C} onPick={(aC) => (aC === "stuck" ? onSet({ aC, aS: "stay" }, [o.dC, o.dS]) : onSet({ aC }, [o.dC]))} />
       <CovGroup prefix={t} title={`${lab(play, o.dS)} · sul bloccante`} role="screen" value={o.aS} options={OFF_COV.S} desc={OFF_DESC.S} onPick={(aS) => onSet({ aS }, [o.dS])} />
       <div className="grid grid-cols-2 gap-1.5">
         <button data-testid={`${t}-reapply`} onClick={onReapply} className="h-9 rounded-full border border-[#334155] text-xs font-semibold flex items-center justify-center gap-1 hover:bg-[#1A263D]"><RotateCcw className="w-3.5 h-3.5" />Riapplica</button>
@@ -117,7 +125,7 @@ export function PnrDock({ play, idx, onClose, onPrev, onNext, onAdd, onDuplicate
             <Pick label="Difensore del bloccante" testid="pnr-screen-def" value={c.dS} options={defs} play={play} onChange={(dS) => onSet({ dS })} />
           </div>
           {(!c.S || !c.T || !c.dB || !c.dS) && <p data-testid="pnr-incomplete" className="text-xs text-amber-300">Completa i quattro giocatori per applicare le coperture.</p>}
-          <CovGroup title={`${lab(play, c.dB)} · sulla palla`} role="ball" value={c.aB} onPick={(aB) => onSet({ aB }, ["B"])} />
+          <CovGroup title={`${lab(play, c.dB)} · sulla palla`} role="ball" value={c.aB} onPick={(aB) => (aB === "stuck" ? onSet({ aB, aS: "recover" }, ["B", "S"]) : onSet({ aB }, ["B"]))} />
           <CovGroup title={`${lab(play, c.dS)} · sul bloccante`} role="screen" value={c.aS} onPick={(aS) => onSet({ aS }, ["S"])} />
           <div className="grid grid-cols-2 gap-1.5">
             <button data-testid="pnr-reapply" onClick={onReapply} className="h-9 rounded-full border border-[#334155] text-xs font-semibold flex items-center justify-center gap-1 hover:bg-[#1A263D]"><RotateCcw className="w-3.5 h-3.5" />Riapplica</button>
@@ -131,7 +139,7 @@ export function PnrDock({ play, idx, onClose, onPrev, onNext, onAdd, onDuplicate
           {play.phases.map((p, i) => (
             <button key={p.id} data-testid={`pnr-seq-${i}`} onClick={() => onGo(i)} className={`w-full text-left text-[11px] px-2 py-1.5 rounded-lg border ${i === idx ? "border-amber-500 bg-amber-500/10" : "border-[#1E293B] hover:bg-[#1A263D]"}`}>
               <span className="font-bold text-amber-300">F{i + 1}</span>{" "}
-              {p.offScreens?.length > 0 && <span className="text-slate-400">{p.offScreens.map((o) => `${OFF_KINDS[o.kind] || "Blocco"}: ${lab(play, o.dC)} ${OFF_COV.C[o.aC] || "—"} · ${lab(play, o.dS)} ${OFF_COV.S[o.aS] || "—"}`).join(" | ")}{p.pnr ? " | " : ""}</span>}
+              {p.offScreens?.length > 0 && <span className="text-slate-400">{p.offScreens.map((o) => `${OFF_KINDS[o.kind] || "Blocco"}${o.exit && o.exit !== "auto" ? ` (${EXITS[o.exit]})` : ""}: ${lab(play, o.dC)} ${OFF_COV.C[o.aC] || "—"} · ${lab(play, o.dS)} ${OFF_COV.S[o.aS] || "—"}`).join(" | ")}{p.pnr ? " | " : ""}</span>}
               {p.pnr ? `${!p.pnr.S || !p.pnr.T || !p.pnr.dB || !p.pnr.dS ? "(incompleto) " : ""}${lab(play, p.pnr.dB)} ${COVERAGES[p.pnr.aB] || "—"} · ${lab(play, p.pnr.dS)} ${COVERAGES[p.pnr.aS] || "—"}` : !p.offScreens?.length && <span className="text-slate-500">nessun blocco</span>}
             </button>
           ))}
