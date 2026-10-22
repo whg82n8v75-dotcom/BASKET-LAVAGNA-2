@@ -315,7 +315,7 @@ function Editor({ play }) {
   return (
     <div data-testid="editor-page" className="h-[100dvh] flex flex-col bg-[#090D14] text-slate-100 overflow-hidden select-none pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
       <EditorTopBar
-        onPresent={() => { exitPlayback(); setPresenting(true); }}
+        onPresent={() => { exitPlayback(); toast.dismiss(); setPresenting(true); }}
         play={play}
         canUndo={hist.past.length > 0}
         canRedo={hist.future.length > 0}

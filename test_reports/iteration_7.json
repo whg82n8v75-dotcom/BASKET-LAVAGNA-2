@@ -1,0 +1,29 @@
+{
+  "summary": "Iteration 7, frontend only: tested the 'Lavagna allenamento' present mode with Playwright Chromium at 1920x1080, 390x844 and 1180x820, opening the preset test-pnr-switch. All requested flows passed and there were no page errors. (1) open-present-btn opens present-mode, which covers the full viewport (0,0,1920x1080). The title shows 'TEST · PICK AND ROLL VS UOMO: CAMBIO' and the label starts at FASE 1/4. When the editor is set to phase-chip-2 first, it opens at FASE 3/4, so it respects the editor's current phase. (2) present-play animated the canvas: 8 distinct hashes over 4s. Pause kept the canvas stable mid-way at FASE 2/4. Resuming ran to the end at FASE 4/4, and the full play took 6.6s, which matches the phase durations. Pressing play again restarted from FASE 1/4. (3) present-next stepped 1→2→3→4, stopping after each phase, and is disabled on the last phase. present-prev went 4→3→2, present-restart went to FASE 1, and dots 3/0/1 jumped to FASE 4/1/2. (4) present-speed cycled 1×→1.5×→0.5×→0.75×→1×. present-notes-toggle showed and hid present-notes with the defensive reading of the current phase: 'PUNTA…' at F1, and 'GOMITO / MEDIA DISTANZA · LATO FORTE DESTRO … Cambio: D5 prende la palla' at F3, which updates when the phase changes. (5) Tapping the court toggled play and pause. A left swipe went from F2 to F3 and a right swipe went back from F3 to F2. ArrowRight, ArrowLeft and Space work, and Escape closes. (6) Both present-close and Escape return to the editor, and the play JSON in localStorage is byte-identical before and after. On 390x844 the editor top bar has no overflow (scrollWidth 390) and open-present-btn is icon-only (38px). On 390x844 and 1180x820 all present controls, dots, the label and the close button are inside the viewport.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "PresentMode / Sonner toast", "issue": "The 'Copia personale creata in \"I miei schemi\"' toast is drawn on top of the present overlay (z-70) when the mode is opened right after opening a preset. It covers the court or title area, and on mobile the top of the court, until it auto-dismisses. Suggestion: call toast.dismiss() when entering present mode, or raise the overlay above the toaster.", "selector": "[data-testid=present-mode]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Present mode 390x844 portrait", "issues": ["The half court is drawn landscape-sized inside a tall portrait area, leaving about 150px of empty dark space above and below it. Consider a vertical or rotated half-court view in portrait, or a hint to rotate the phone."]}
+    ]
+  },
+  "test_report_links": ["/app/tests/helpers.js"],
+  "action_items": [
+    "LOW: Dismiss or hide sonner toasts while present mode is open",
+    "LOW (optional): Make better use of portrait space on phones in present mode"
+  ],
+  "critical_code_review_comments": [
+    "PresentMode: the prev button's disabled state reads tRef.current during render, so it is not reactive. It only updates when another state, such as phase or playing, changes. This works today because phase or playing always change together with it, but it is fragile.",
+    "PresentMode.next(): if called while the animation is already running mid-phase, it sets stopAt to the next phase boundary. This is fine, but the key and swipe handlers can trigger next() repeatedly during the animation, and each call re-targets the stop from the stale `phase` state. Consider guarding next() while it is still playing toward stopAt."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend only)", "frontend": "100% of the requested flows"},
+  "test_credentials": "none required",
+  "seed_data_creation": "Library preset copies only, in ephemeral browser localStorage",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Present mode: before clicking open-present-btn, stub document.documentElement.requestFullscreen = undefined. Hash the canvas via '[data-testid=present-court] canvas'. present-play has title 'Riproduci' or 'Pausa', which gives the playing state. phase-chip-N in the editor sets the start phase. test-pnr-switch has phase durations [1.6,1.6,1.8,1.0] with a 0.5s pause each."
+}

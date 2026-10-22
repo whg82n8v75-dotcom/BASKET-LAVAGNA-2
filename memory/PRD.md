@@ -19,6 +19,8 @@ PWA in italiano per allenatori di basket: lavagna tattica animata (fasi/timeline
 
 - 2026-06 v6: taglie anche per gli attaccanti, rilevamento mismatch (fisico/velocità) con badge e note, cambio selettivo basato sui nuovi accoppiamenti; export video del confronto affiancato (recordCompare); preferenza MP4 H.264, altrimenti WebM.
 
+- 2026-06 v7: Lavagna allenamento (PresentMode): schermo intero + wake lock, comandi grandi (play/pausa, fase avanti/indietro, inizio, velocità, lettura tattica), puntini fasi, tap/swipe/tastiera.
+
 ## Limiti dichiarati
 - Pressing a tutto campo non gestito dal motore (preset manuale). GIF non disponibile.
 - Zone: nessun raddoppio/trap esplicito; ruoli zona assegnati per numero.

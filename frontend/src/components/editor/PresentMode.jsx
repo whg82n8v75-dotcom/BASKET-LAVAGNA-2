@@ -140,6 +140,9 @@ export function PresentMode({ play, startPhase = 0, playerSize = 1, onClose }) {
       </div>
       <div ref={wrap} data-testid="present-court" className="relative flex-1 min-h-0 touch-none" onPointerDown={onDown} onPointerUp={onUp}>
         <canvas ref={canvas} style={{ width: size.w, height: size.h }} className="block" />
+        {size.h > size.w * 1.3 && !playing && (
+          <div data-testid="present-rotate-hint" className="absolute top-3 inset-x-0 text-center text-sm text-white/55 pointer-events-none">Ruota il dispositivo in orizzontale per un campo più grande</div>
+        )}
         {notes && info && (
           <div data-testid="present-notes" className="absolute left-3 bottom-3 max-w-[min(560px,90%)] rounded-2xl bg-black/75 backdrop-blur p-3 sm:p-4 text-sm sm:text-base pointer-events-none">
             <div className="font-heading text-lg sm:text-xl font-bold uppercase text-blue-300">{info.label}</div>
