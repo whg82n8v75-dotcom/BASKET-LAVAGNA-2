@@ -55,6 +55,7 @@ export function movePlayer(play, i, id, pos, propagate = true) {
   for (let k = i + 1; propagate && k < phases.length; k++) {
     if (!eq(phases[k].positions[id], old)) break;
     if (phases[k].pnr && [phases[k].pnr.dB, phases[k].pnr.dS, phases[k].pnr.S, phases[k].pnr.T].includes(id)) break;
+    if ((phases[k].offScreens || []).some((o) => [o.dC, o.dS, o.S, o.C].includes(id))) break;
     phases[k] = { ...phases[k], positions: { ...phases[k].positions, [id]: pos } };
   }
   if (i > 0) {
@@ -81,7 +82,7 @@ export function setBall(play, i, ball, propagate = true) {
 
 export function newPhaseFrom(ph, duration) {
   const next = makePhase({ ...ph.positions }, { ...ph.ball }, { duration: duration ?? ph.duration, pause: ph.pause, easing: ph.easing });
-  return ph.pnr ? { ...next, pnr: { ...ph.pnr } } : next;
+  return { ...next, ...(ph.pnr ? { pnr: { ...ph.pnr } } : {}), ...(ph.offScreens?.length ? { offScreens: ph.offScreens.map((o) => ({ ...o })) } : {}) };
 }
 
 export function addDrawing(play, i, drawing, duration) {

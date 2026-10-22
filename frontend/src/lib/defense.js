@@ -462,9 +462,11 @@ function runEngine(play, cfg, upto = play.phases.length - 1, sticky = null) {
     const info = readBall(ballN);
     const ev = detectEvents(play, k, fr, state.prevScreens);
     const pnr = pnrValid(play, ph);
-    if (pnr) {
-      ev.screensSet = ev.screensSet.filter((sc) => sc.S !== pnr.S);
-      ev.screensUse = ev.screensUse.filter((sc) => sc.S !== pnr.S);
+    const offSc = offValid(play, ph);
+    const manualS = new Set([pnr?.S, ...offSc.map((o) => o.S)].filter(Boolean));
+    if (manualS.size) {
+      ev.screensSet = ev.screensSet.filter((sc) => !manualS.has(sc.S));
+      ev.screensUse = ev.screensUse.filter((sc) => !manualS.has(sc.S));
     }
     if (holder && (info.zone === "paint" || info.zone === "rim")) ev.penetration = true;
     const evNotes = [];
@@ -504,8 +506,17 @@ function runEngine(play, cfg, upto = play.phases.length - 1, sticky = null) {
         notes.push(`${short(play, d)} (${role === "B" ? "sulla palla" : "sul bloccante"}): ${COVERAGES[a]} — ${COV_DESC[role][a]}`);
       });
     }
+    offSc.forEach((o) => {
+      const C = fr.toN(ph.positions[o.C]), S = fr.toN(ph.positions[o.S]);
+      const e = exitDir(o.kind, C, S, ballN);
+      [["C", o.dC, o.aC], ["S", o.dS, o.aS]].forEach(([role, d, a]) => {
+        outN[d] = a === "manual" ? fr.toN(ph.positions[d]) : offSpot(role, a, C, S, e, ballN, info, prm);
+        notes.push(`${short(play, d)} (${role === "C" ? "sul tagliatore" : "sul bloccante"}, ${OFF_KINDS[o.kind]}): ${OFF_COV[role][a]} — ${OFF_DESC[role][a]}`);
+      });
+    });
     separate(outN, cfg.mode === "man" ? 1.0 : 1.4);
     if (pnr) [[pnr.dB, pnr.aB], [pnr.dS, pnr.aS]].forEach(([d, a]) => a === "manual" && (outN[d] = fr.toN(ph.positions[d])));
+    offSc.forEach((o) => [[o.dC, o.aC], [o.dS, o.aS]].forEach(([d, a]) => a === "manual" && (outN[d] = fr.toN(ph.positions[d]))));
     const mismatches = [];
     if (cfg.mode === "man")
       Object.entries(state.assign).forEach(([d, o]) => {
@@ -693,17 +704,104 @@ export function detectPnr(play, k, cfg) {
 export function applyPnr(play, k, cfg, which = ["B", "S"]) {
   const ph = play.phases[k];
   const c = pnrValid(play, ph);
-  if (!c) return play;
+  const ids = which.map((r) => (r === "B" ? c?.dB : r === "S" ? c?.dS : r)).filter(Boolean);
+  if (!ids.length) return play;
   const { results } = runEngine(play, cfgFull(cfg), k);
   const { gen, defInfo } = results[k];
   const positions = { ...ph.positions };
   const defGen = { ...(ph.defGen || {}) };
-  which.forEach((r) => {
-    const d = r === "B" ? c.dB : c.dS;
+  ids.forEach((d) => {
     if (gen[d] && !ph.locked?.[d]) {
       positions[d] = gen[d];
       defGen[d] = gen[d];
     }
   });
   return { ...play, phases: play.phases.map((x, i) => (i === k ? { ...ph, positions, defGen, defInfo } : x)) };
+}
+
+export const OFF_KINDS = { pin: "Pin-down", flare: "Flare", back: "Back screen", cross: "Cross screen", other: "Altro blocco" };
+export const OFF_COV = {
+  C: { trail: "Trail (insegue)", toplock: "Top lock", under: "Passa sotto", switch: "Switch", deny: "Anticipo", recover: "Recupero e rientro", manual: "Movimento manuale" },
+  S: { bump: "Bump / Show", switch: "Switch", stay: "Resta sul bloccante", help: "Aiuto sul taglio", open: "Si stacca (fa passare)", recover: "Recupero e rientro", manual: "Movimento manuale" },
+};
+export const OFF_DESC = {
+  C: {
+    trail: "segue il tagliatore attraverso il blocco, attaccato alla sua anca", toplock: "si mette sul lato dell'uscita e nega il blocco, spingendo verso il taglio backdoor",
+    under: "taglia la strada sotto il blocco per anticipare l'uscita", switch: "cambia e prende il bloccante", deny: "anticipa la linea di passaggio tra palla e tagliatore",
+    recover: "rientra sul proprio uomo nella posizione palla-uomo", manual: "posizione decisa dall'allenatore",
+  },
+  S: {
+    bump: "esce sull'uscita del tagliatore per rallentarlo, poi rientra", switch: "cambia e prende il tagliatore in uscita", stay: "resta sul bloccante, pronto al suo slip",
+    help: "si stacca verso il ferro per proteggere il taglio (curl / back)", open: "arretra e lascia lo spazio al compagno che passa sotto",
+    recover: "rientra sul bloccante, tra lui e il canestro", manual: "posizione decisa dall'allenatore",
+  },
+};
+export const OFF_SHORT = { trail: "TRAIL", toplock: "TOP LOCK", under: "SOTTO", switch: "SWITCH", deny: "ANTICIPO", recover: "RECUPERO", manual: "MANUALE", bump: "BUMP", stay: "RESTA", help: "AIUTO", open: "APRE" };
+
+function exitDir(kind, C, S, ball) {
+  const up = norm(sub(S, HOOP));
+  if (kind === "pin") return norm(add(up, P(Math.sign(S.lat || C.lat || 1) * 0.5, 0)));
+  if (kind === "back") return norm(sub(HOOP, S));
+  if (kind === "flare") return norm(P(Math.sign(C.lat - ball.lat) || Math.sign(C.lat) || 1, 0.35));
+  if (kind === "cross") return P(Math.sign(ball.lat - C.lat) || 1, 0);
+  return norm(sub(S, C));
+}
+
+function offSpot(role, a, C, S, e, ball, info, prm) {
+  const toH = (x) => norm(sub(HOOP, x));
+  const exit = add(S, mul(e, 1.2));
+  if (role === "C") {
+    switch (a) {
+      case "trail": return add(C, add(mul(e, -0.7), mul(norm(sub(S, C)), 0.2)));
+      case "toplock": return add(C, mul(e, 1.0));
+      case "under": return add(add(S, mul(toH(S), 1.1)), mul(e, 1.0));
+      case "switch": return toward(S, HOOP, 1.0);
+      case "deny": return add(C, mul(norm(sub(ball, C)), 0.9));
+      default: return manOff(C, ball, info, prm, false);
+    }
+  }
+  switch (a) {
+    case "bump": return add(exit, mul(norm(sub(ball, exit)), 0.3));
+    case "switch": return add(exit, mul(toH(exit), 0.6));
+    case "stay": return add(toward(S, HOOP, 0.9), mul(norm(sub(ball, S)), 0.3));
+    case "help": return mix(S, HOOP, 0.5);
+    case "open": return add(S, mul(norm(sub(ball, S)), 1.3));
+    default: return manOff(S, ball, info, prm, false);
+  }
+}
+
+function offValid(play, ph) {
+  return (ph.offScreens || [])
+    .filter((c) => c && c.S && c.C && c.dC && c.dS && c.S !== c.C && c.dC !== c.dS && [c.S, c.C, c.dC, c.dS].every((id) => ph.positions[id] && play.players.some((p) => p.id === id)))
+    .map((c) => ({ ...c, kind: OFF_KINDS[c.kind] ? c.kind : "other", aC: OFF_COV.C[c.aC] ? c.aC : "trail", aS: OFF_COV.S[c.aS] ? c.aS : "stay" }));
+}
+
+export function guessKind(C, S, ball) {
+  if (C.dep < S.dep - 0.8) return "pin";
+  if (C.dep > S.dep + 0.8 && hoopDist(S) < hoopDist(C)) return "back";
+  return Math.sign(C.lat - ball.lat) === Math.sign(C.lat - S.lat) ? "flare" : "cross";
+}
+
+export function detectOffScreen(play, k, cfg) {
+  const ph = play.phases[k];
+  const fr = courtFrame(play);
+  const holder = ph.ball?.holder;
+  const used = new Set([ph.pnr?.S, ...(ph.offScreens || []).map((o) => o.S)].filter(Boolean));
+  const offs = play.players.filter((p) => p.team === "O" && ph.positions[p.id]).map((p) => p.id);
+  const draws = [...ph.drawings, ...(play.phases[k - 1]?.drawings || [])];
+  const { results } = runEngine({ ...play, phases: play.phases.map((x, i) => (i === k ? { ...x, offScreens: [] } : x)) }, cfgFull(cfg), k);
+  const assign = results[k].defInfo.assign || {};
+  const defOf = (o) => Object.keys(assign).find((d) => assign[d] === o) || null;
+  const scr = draws.find((d) => d.type === "screen" && offs.includes(d.playerId) && !used.has(d.playerId) && d.playerId !== holder);
+  let S = scr?.playerId || null, C = null;
+  if (S) {
+    const sp = ph.positions[S];
+    C = offs.filter((o) => o !== S && o !== holder).sort((a, b) => Math.hypot(ph.positions[a].x - sp.x, ph.positions[a].y - sp.y) - Math.hypot(ph.positions[b].x - sp.x, ph.positions[b].y - sp.y))[0] || null;
+  } else {
+    const prev = (play.phases[k - 1]?.offScreens || []).find((o) => !used.has(o.S) && ph.positions[o.S] && ph.positions[o.C]);
+    if (prev) return { ...prev, id: Math.random().toString(36).slice(2, 8) };
+  }
+  const ballN = holder && ph.positions[holder] ? fr.toN(ph.positions[holder]) : fr.toN({ x: ph.ball?.x ?? 7, y: ph.ball?.y ?? 7.5 });
+  const kind = S && C ? guessKind(fr.toN(ph.positions[C]), fr.toN(ph.positions[S]), ballN) : "other";
+  return { id: Math.random().toString(36).slice(2, 8), kind, S, C, dC: defOf(C), dS: defOf(S), aC: "trail", aS: "stay" };
 }

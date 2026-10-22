@@ -12,7 +12,7 @@ import { EditorTopBar } from "@/components/editor/EditorTopBar";
 import { ExportVideoDialog } from "@/components/editor/ExportVideoDialog";
 import { DefensePanel } from "@/components/editor/DefensePanel";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { generateDefense, manualEdits, hasGenerated, DEFAULT_DEFENSE, liveDefensePhase, detectPnr, applyPnr } from "@/lib/defense";
+import { generateDefense, manualEdits, hasGenerated, DEFAULT_DEFENSE, liveDefensePhase, detectPnr, applyPnr, detectOffScreen, OFF_KINDS } from "@/lib/defense";
 import { PnrDock, covTags } from "@/components/editor/PnrDock";
 import { LiveBar } from "@/components/editor/LiveBar";
 import { CompareDialog } from "@/components/editor/CompareDialog";
@@ -71,6 +71,38 @@ function Editor({ play }) {
     },
     onReapply: () => commit(applyPnr(playRef.current, idx, cfgOf(playRef.current))),
     onRemove: () => commit(setPnrPhase(playRef.current, idx, null)),
+  };
+  const setOff = (p, list) => ({ ...p, phases: p.phases.map((x, i) => (i === idx ? { ...x, offScreens: list } : x)) });
+  const applyIds = (p0, ids) => {
+    let p = p0;
+    ids.filter(Boolean).forEach((d) => {
+      if (p.phases[idx].locked?.[d]) p = M.setLock(p, idx, d, false);
+    });
+    return p.defense?.live ? react(p) : applyPnr(p, idx, cfgOf(p), ids.filter(Boolean));
+  };
+  const offOps = {
+    onAdd: () => {
+      const p = playRef.current;
+      const o = detectOffScreen(p, idx, cfgOf(p));
+      commit(applyIds(setOff(p, [...(p.phases[idx].offScreens || []), o]), [o.dC, o.dS]));
+      toast(o.S ? `Blocco lontano dalla palla rilevato (${OFF_KINDS[o.kind]})` : "Nessun blocco disegnato: scegli bloccante e tagliatore", { duration: 1800 });
+    },
+    onSet: (i, patch, ids) => {
+      const p = playRef.current;
+      const list = [...(p.phases[idx].offScreens || [])];
+      const next = { ...list[i], ...patch };
+      const assign = p.phases[idx].defInfo?.assign || {};
+      const defOf = (o) => Object.keys(assign).find((d) => assign[d] === o);
+      if (patch.C) next.dC = defOf(patch.C) || next.dC;
+      if (patch.S) next.dS = defOf(patch.S) || next.dS;
+      list[i] = next;
+      commit(applyIds(setOff(p, list), ids || [next.dC, next.dS]));
+    },
+    onReapply: (i) => {
+      const o = playRef.current.phases[idx].offScreens[i];
+      commit(applyPnr(playRef.current, idx, cfgOf(playRef.current), [o.dC, o.dS].filter(Boolean)));
+    },
+    onRemove: (i) => commit(setOff(playRef.current, playRef.current.phases[idx].offScreens.filter((_, k) => k !== i))),
   };
   const canvasRef = useRef(null);
   const progressRef = useRef(null);
@@ -342,7 +374,7 @@ function Editor({ play }) {
       smooth: liveOn ? { ids: play.players.filter((p) => p.team === "D").map((p) => p.id), tau: 0.18 + 0.5 * (play.defense?.params?.reaction ?? 0.3), preview: play.defense?.preview !== false } : null,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sel, ghost, settings.playerSize, play.phases[idx]?.locked, play.phases[idx]?.defInfo, play.phases[idx]?.pnr, liveOn, play.players, play.defense?.params?.reaction, play.defense?.preview],
+    [sel, ghost, settings.playerSize, play.phases[idx]?.locked, play.phases[idx]?.defInfo, play.phases[idx]?.pnr, play.phases[idx]?.offScreens, liveOn, play.players, play.defense?.params?.reaction, play.defense?.preview],
   );
   const selPlayer = sel?.kind === "player" ? play.players.find((p) => p.id === sel.id) : null;
   const selDrawing = sel?.kind === "drawing" ? M.findDrawing(play, sel.id) : null;
@@ -459,6 +491,7 @@ function Editor({ play }) {
             onDuplicate={phaseOps.onDuplicate}
             onGo={goPhase}
             {...pnrOps}
+            off={offOps}
           />
         )}
       </div>
