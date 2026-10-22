@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronLeft, Undo2, Redo2, EllipsisVertical, Eye, EyeOff, Check, Video, Image as ImageIcon, Images, FileDown, Copy, UserPlus, Shield } from "lucide-react";
+import { ChevronLeft, Undo2, Redo2, EllipsisVertical, Eye, EyeOff, Check, Video, Image as ImageIcon, Images, FileDown, Copy, UserPlus, Shield , MonitorPlay } from "lucide-react";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 import { CATEGORIES } from "@/lib/model";
@@ -22,7 +22,7 @@ async function deliver(blobPromise, filename) {
   }
 }
 
-export function EditorTopBar({ play, canUndo, canRedo, onUndo, onRedo, onBack, onRename, onChange, onAddPlayer, onExportVideo, onDuplicatePlay, phaseIndex, onOpenDefense }) {
+export function EditorTopBar({ onPresent,  play, canUndo, canRedo, onUndo, onRedo, onBack, onRename, onChange, onAddPlayer, onExportVideo, onDuplicatePlay, phaseIndex, onOpenDefense }) {
   const { savedAt, settings } = usePlays();
   const [editing, setEditing] = useState(false);
   const hidden = play.hidden || {};
@@ -53,6 +53,7 @@ export function EditorTopBar({ play, canUndo, canRedo, onUndo, onRedo, onBack, o
           </button>
         ))}
       </div>
+      <button data-testid="open-present-btn" onClick={onPresent} className="h-9 px-2.5 rounded-full flex items-center gap-1.5 text-xs font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/40 hover:bg-amber-500/25 shrink-0" title="Lavagna allenamento (schermo intero)"><MonitorPlay className="w-4 h-4" /><span className="hidden md:inline">Lavagna</span></button>
       <button data-testid="open-defense-btn" onClick={onOpenDefense} className="h-9 px-2.5 rounded-full flex items-center gap-1.5 text-xs font-semibold bg-blue-600/20 text-blue-300 border border-blue-500/40 hover:bg-blue-600/30 shrink-0" title="Motore difensivo"><Shield className="w-4 h-4" /><span className="hidden md:inline">Difesa</span></button>
       <button data-testid="undo-btn" onClick={onUndo} disabled={!canUndo} className="w-10 h-10 grid place-items-center rounded-full hover:bg-[#1A263D] disabled:opacity-30" title="Annulla"><Undo2 className="w-5 h-5" /></button>
       <button data-testid="redo-btn" onClick={onRedo} disabled={!canRedo} className="w-10 h-10 grid place-items-center rounded-full hover:bg-[#1A263D] disabled:opacity-30" title="Ripristina"><Redo2 className="w-5 h-5" /></button>

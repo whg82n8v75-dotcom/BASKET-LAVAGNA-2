@@ -15,6 +15,7 @@ import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescript
 import { generateDefense, manualEdits, hasGenerated, DEFAULT_DEFENSE, liveDefensePhase } from "@/lib/defense";
 import { LiveBar } from "@/components/editor/LiveBar";
 import { CompareDialog } from "@/components/editor/CompareDialog";
+import { PresentMode } from "@/components/editor/PresentMode";
 
 function Editor({ play }) {
   const { upsertPlay, settings, copyPlay } = usePlays();
@@ -36,6 +37,7 @@ function Editor({ play }) {
   const [defOpen, setDefOpen] = useState(false);
   const [genAsk, setGenAsk] = useState(null);
   const [compareOpen, setCompareOpen] = useState(false);
+  const [presenting, setPresenting] = useState(false);
   const canvasRef = useRef(null);
   const progressRef = useRef(null);
   const tRef = useRef(0);
@@ -313,6 +315,7 @@ function Editor({ play }) {
   return (
     <div data-testid="editor-page" className="h-[100dvh] flex flex-col bg-[#090D14] text-slate-100 overflow-hidden select-none pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
       <EditorTopBar
+        onPresent={() => { exitPlayback(); setPresenting(true); }}
         play={play}
         canUndo={hist.past.length > 0}
         canRedo={hist.future.length > 0}
@@ -433,6 +436,7 @@ function Editor({ play }) {
       />
       <DefensePanel open={defOpen} onOpenChange={setDefOpen} play={play} phaseIndex={idx} onConfig={(defense) => live(react({ ...playRef.current, defense }))} onGenerate={onGenerate} onCompare={() => { setDefOpen(false); setCompareOpen(true); }} />
       <CompareDialog open={compareOpen} onOpenChange={setCompareOpen} play={play} />
+      {presenting && <PresentMode play={play} startPhase={idx} playerSize={settings.playerSize} onClose={() => setPresenting(false)} />}
       <AlertDialog open={!!genAsk} onOpenChange={(o) => !o && setGenAsk(null)}>
         <AlertDialogContent data-testid="generate-confirm-dialog" className="bg-[#131C2E] border-[#1E293B] text-slate-100">
           <AlertDialogHeader>
