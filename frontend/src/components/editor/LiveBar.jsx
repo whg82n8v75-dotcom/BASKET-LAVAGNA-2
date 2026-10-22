@@ -20,6 +20,7 @@ export function LiveBar({ play, phaseIndex, onToggle, onMode, onReset, onUnlockA
           <button key={k} data-testid={`live-mode-${k}`} title={MODES[k]} onClick={() => onMode(k)} className={`h-7 px-2.5 rounded-full text-xs font-semibold ${mode === k ? "bg-blue-600 text-white" : "text-slate-300"}`}>{SHORT[k]}</button>
         ))}
       </div>
+      <button data-testid="pnr-toggle-btn" onClick={onPnr} title="Coperture sul blocco frame per frame" className={`h-8 px-2.5 rounded-full text-xs font-semibold flex items-center gap-1 shrink-0 border ${pnrOpen ? "bg-blue-600 border-blue-500 text-white" : "border-[#334155] hover:bg-[#1A263D]"}`}><Blocks className="w-3.5 h-3.5" /><span className="sm:hidden">P&R</span><span className="hidden sm:inline">Blocco P&R</span></button>
       {on && (
         <>
           <button data-testid="live-reset-btn" onClick={onReset} title="Ripristina posizioni difensive generate" className="h-8 px-2.5 rounded-full text-xs font-semibold border border-[#334155] flex items-center gap-1 shrink-0 hover:bg-[#1A263D]"><RotateCcw className="w-3.5 h-3.5" /><span className="hidden sm:inline">Ripristina</span></button>
@@ -27,8 +28,7 @@ export function LiveBar({ play, phaseIndex, onToggle, onMode, onReset, onUnlockA
           <button data-testid="live-confirm-phase-btn" onClick={onConfirm} title="Registra la fase e crea la successiva" className="h-8 px-2.5 rounded-full text-xs font-semibold bg-emerald-600 text-white flex items-center gap-1 shrink-0"><CheckCheck className="w-3.5 h-3.5" />Conferma fase</button>
         </>
       )}
-      <button data-testid="pnr-toggle-btn" onClick={onPnr} title="Coperture sul blocco frame per frame" className={`h-8 px-2.5 rounded-full text-xs font-semibold flex items-center gap-1 shrink-0 border ml-auto ${pnrOpen ? "bg-blue-600 border-blue-500 text-white" : "border-[#334155] hover:bg-[#1A263D]"}`}><Blocks className="w-3.5 h-3.5" />Blocco P&R</button>
-      <button data-testid="live-params-btn" onClick={onParams} title="Parametri difensivi" className="h-8 w-8 rounded-full grid place-items-center border border-[#334155] shrink-0 hover:bg-[#1A263D]"><SlidersHorizontal className="w-3.5 h-3.5" /></button>
+      <button data-testid="live-params-btn" onClick={onParams} title="Parametri difensivi" className="h-8 w-8 rounded-full grid place-items-center border border-[#334155] shrink-0 hover:bg-[#1A263D] ml-auto"><SlidersHorizontal className="w-3.5 h-3.5" /></button>
     </div>
   );
 }

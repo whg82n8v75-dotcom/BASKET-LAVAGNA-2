@@ -4,7 +4,7 @@ import { COVERAGES, COV_DESC } from "@/lib/defense";
 const SHORT = { over: "OVER", under: "UNDER", switch: "SWITCH", show: "SHOW", trap: "TRAP", drop: "DROP", ice: "ICE", contain: "CONTIENI", recover: "RECUPERO", manual: "MANUALE" };
 export const covTags = (ph) => {
   const c = ph?.pnr;
-  if (!c?.dB || !c?.dS) return null;
+  if (!c?.dB || !c?.dS || !c?.S || !c?.T) return null;
   return { [c.dB]: SHORT[c.aB] || "", [c.dS]: SHORT[c.aS] || "" };
 };
 
@@ -48,7 +48,7 @@ export function PnrDock({ play, idx, onClose, onPrev, onNext, onAdd, onDuplicate
   return (
     <div data-testid="pnr-dock" className="order-3 shrink-0 min-h-0 overflow-y-auto bg-[#0E1522] border-t landscape:border-t-0 landscape:border-l border-[#1E293B] p-3 space-y-3 max-h-[42dvh] landscape:max-h-none landscape:w-[300px] xl:landscape:w-[340px]">
       <div className="flex items-center gap-1">
-        <div className="font-heading text-lg font-extrabold uppercase tracking-tight flex-1">Blocco · <span data-testid="pnr-frame-label" className="text-amber-400">Frame {idx + 1}/{play.phases.length}</span></div>
+        <div className="font-heading text-base font-extrabold uppercase tracking-tight flex-1 whitespace-nowrap">Blocco · <span data-testid="pnr-frame-label" className="text-amber-400">Frame {idx + 1}/{play.phases.length}</span></div>
         <button data-testid="pnr-prev" onClick={onPrev} disabled={idx === 0} className="w-8 h-8 grid place-items-center rounded-full hover:bg-[#1A263D] disabled:opacity-30" title="Frame precedente"><ChevronLeft className="w-4 h-4" /></button>
         <button data-testid="pnr-next" onClick={onNext} disabled={idx >= play.phases.length - 1} className="w-8 h-8 grid place-items-center rounded-full hover:bg-[#1A263D] disabled:opacity-30" title="Frame successivo"><ChevronRight className="w-4 h-4" /></button>
         <button data-testid="pnr-add-frame" onClick={onAdd} className="w-8 h-8 grid place-items-center rounded-full hover:bg-[#1A263D] text-amber-400" title="Nuovo frame (copia posizioni e coperture)"><Plus className="w-4 h-4" /></button>
@@ -83,7 +83,7 @@ export function PnrDock({ play, idx, onClose, onPrev, onNext, onAdd, onDuplicate
           {play.phases.map((p, i) => (
             <button key={p.id} data-testid={`pnr-seq-${i}`} onClick={() => onGo(i)} className={`w-full text-left text-[11px] px-2 py-1.5 rounded-lg border ${i === idx ? "border-amber-500 bg-amber-500/10" : "border-[#1E293B] hover:bg-[#1A263D]"}`}>
               <span className="font-bold text-amber-300">F{i + 1}</span>{" "}
-              {p.pnr?.dB ? `${lab(play, p.pnr.dB)} ${COVERAGES[p.pnr.aB] || "—"} · ${lab(play, p.pnr.dS)} ${COVERAGES[p.pnr.aS] || "—"}` : <span className="text-slate-500">nessun blocco</span>}
+              {p.pnr ? `${!p.pnr.S || !p.pnr.T || !p.pnr.dB || !p.pnr.dS ? "(incompleto) " : ""}${lab(play, p.pnr.dB)} ${COVERAGES[p.pnr.aB] || "—"} · ${lab(play, p.pnr.dS)} ${COVERAGES[p.pnr.aS] || "—"}` : <span className="text-slate-500">nessun blocco</span>}
             </button>
           ))}
         </div>

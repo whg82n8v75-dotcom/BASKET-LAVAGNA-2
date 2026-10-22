@@ -1,0 +1,32 @@
+{
+  "summary": "Frontend-only test of the frame-by-frame P&R dock (Blocco P&R) and MODIFICA 1 (zone 2-3 center at 2.9 m). I ran 8 Playwright runs on desktop 1920x1080, iPhone 390x844 and iPad 1180x820, reading localStorage btm.plays.v1 to check positions and pnr data. All requested flows pass and there were no console or page errors: dock open/close, Frame N/M label, pnr-prev/next/seq-N synced with phase chips, detect (S=o5, T=o1, dB=d1, dS=d5, over/show), only d1/d5 changing in the edited frame with other frames untouched, 9 different positions for each defender across the 9 coverages, description text updating, manual keeping the defender's position, add/duplicate frame copying pnr, sequence list text, frames independent, drag kept with pnr kept, propagation stopping at pnr frames, reapply, remove, undo, reload persistence, tags drawn in the editor, during playback and in present mode, playback/speed cycle/prev/next, live mode (coverage applies, a dragged-and-locked defender gets unlocked), Genera difesa keeping the pnr coverages, compare dialog, zone 2-3 positions and the mobile/tablet layouts. Found 2 minor issues and 2 UX gaps (listed below).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "PnrDock covTags / canvas tags", "issue": "If the pnr is incomplete (e.g. S=null after pnr-detect in a frame without a nearby screen drawing), tags such as OVER/DROP are still drawn under the defenders and pnr-sequence lists 'F3 D2 Over · D5 Drop'. The coverage is not actually applied, because pnrValid returns null. Fix: covTags should require c.S && c.T (or use pnrValid), and the sequence line should mark incomplete entries.", "selector": "[data-testid=pnr-sequence]", "priority": "LOW"},
+      {"component": "pnr-detect", "issue": "detectPnr only looks at screen drawings in the current and previous frame. In test-pnr-over, Frame 3 detects S=null/dS=null even though Frame 2 has a full pnr. Suggest falling back to the previous frame's pnr (S/T/dB/dS) when no screen drawing is found.", "selector": "[data-testid=pnr-detect]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Editor iPhone 390x844", "issues": ["In the scrollable live-bar the pnr-toggle-btn spans x 323-431, so it is partly off-screen, and live-params-btn is fully off-screen. There is no scroll affordance (no-scrollbar), and it gets worse when live is ON (Ripristina/Conferma fase take more space).", "With the dock open the court area is only about 209 px tall, so tags and players overlap heavily. This is acceptable but tight."]},
+      {"screen": "Present mode / editor canvas", "issues": ["When D1 is Under and D5 is Drop, the tags overlap each other and the red 'B' screen symbol (cosmetic)."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "covTags: only return tags when the pnr is complete (S, T, dB, dS), and show an 'incompleto' marker in the pnr-sequence row",
+    "Optional: detectPnr should fall back to the previous frame's pnr players when no screen drawing is found in the current or previous frame",
+    "Optional: make pnr-toggle-btn reachable without horizontal scroll on 390px (icon-only on narrow screens or a scroll hint)"
+  ],
+  "critical_code_review_comments": [
+    "onReapply calls applyPnr directly. In live mode, defenders locked by dragging are skipped (applyPnr checks ph.locked), so Riapplica silently does nothing for them, unlike coverage clicks, which unlock. Consider unlocking dB/dS in onReapply the same way applyCov does.",
+    "Editor.jsx is 528 lines and defense.js is 708 lines: defense.js is over the 700-line guideline. Consider moving the pnr logic (COVERAGES, pnrSpot, detectPnr, applyPnr) into lib/pnr.js.",
+    "Autosave is debounced by 350 ms: tests that read localStorage must wait at least 600 ms."
+  ],
+  "updated_files": ["/app/test_reports/iteration_8.json"],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "97%"},
+  "seed_data_creation": "None. Plays are created only as personal copies of presets in the browser's localStorage.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Store autosave debounce is 350 ms, so wait about 600 ms before reading localStorage btm.plays.v1 (find the play by the id in the /editor/<id> URL). test-pnr-over: 4 phases. The screen drawing is in phase 0, so detect in phase 1 gives S=o5,T=o1,dB=d1,dS=d5, while detect in phase 2 gives S=null. Over/show in phase 1: d1 (9.31,8.3), d5 (8.27,9.2). Canvas mapping as given by E1 works for drags with tool-select. Zone 2-3 phase 0: d1 (7.7,5.6), d2 (7.7,9.4), d3 (2.7,3.9), d4 (2.7,11.1), d5 (2.9,7.5). The dock is hidden during playback (pnrOpen && !playing). Present mode: stub requestFullscreen first."
+}

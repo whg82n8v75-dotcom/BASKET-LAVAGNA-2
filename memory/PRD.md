@@ -21,6 +21,8 @@ PWA in italiano per allenatori di basket: lavagna tattica animata (fasi/timeline
 
 - 2026-06 v7: Lavagna allenamento (PresentMode): schermo intero + wake lock, comandi grandi (play/pausa, fase avanti/indietro, inizio, velocità, lettura tattica), puntini fasi, tap/swipe/tastiera.
 
+- 2026-06 v8: Coperture P&R frame by frame (PnrDock, phase.pnr {S,T,dB,dS,aB,aS}; 10 coperture per difensore indipendenti; tag sul campo, sequenza coperture, rileva/riapplica/togli; nuovi frame copiano la copertura). MODIFICA 1: centro zona 2-3 in partenza a 4,4 m dalla linea di fondo (appena dentro la lunetta).
+
 ## Limiti dichiarati
 - Pressing a tutto campo non gestito dal motore (preset manuale). GIF non disponibile.
 - Zone: nessun raddoppio/trap esplicito; ruoli zona assegnati per numero.

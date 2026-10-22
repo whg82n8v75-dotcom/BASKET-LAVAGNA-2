@@ -389,7 +389,7 @@ function zoneBase(mode, ball, info, prm, offN) {
   if (mode === "zone23") {
     const top = {
       gL: P(ball.lat - 1.9 * w, clamp(bd - 1.5, topDep - 0.6, topDep + 0.8)), gR: P(ball.lat + 1.9 * w, clamp(bd - 1.5, topDep - 0.6, topDep + 0.8)),
-      wL: P(-3.6 * w, 2.7), wR: P(3.6 * w, 2.7), c: P(ball.lat * 0.15, highPost ? 3.8 : 2.9),
+      wL: P(-3.6 * w, 2.7), wR: P(3.6 * w, 2.7), c: P(ball.lat * 0.15, 4.4),
     };
     const sideF = { gS: ballG, gW: S(P(0.7, topDep - 1.1)), wS: S(P((cornerOcc ? 5.0 : 4.3) * w, 2.5)), c: S(P(1.9, 2.0)), wW: S(P(-weakLat * w, 2.0)) };
     const cornerF = { wS: onBall(ball, prm), c: S(P(2.6, 1.6)), gS: S(P(4.0, 4.8)), gW: S(P(0.8, 5.0)), wW: S(P(-0.8, 1.8)) };
@@ -677,8 +677,9 @@ export function detectPnr(play, k, cfg) {
   const draws = [...ph.drawings, ...(play.phases[k - 1]?.drawings || [])];
   const scr = draws.find((d) => d.type === "screen" && offs.includes(d.playerId));
   const holder = ph.ball?.holder;
-  const S = scr?.playerId || null;
-  let T = holder && holder !== S ? holder : null;
+  const prevC = play.phases[k - 1]?.pnr;
+  const S = scr?.playerId || (prevC?.S && ph.positions[prevC.S] ? prevC.S : null);
+  let T = holder && holder !== S ? holder : prevC?.T && prevC.T !== S && ph.positions[prevC.T] ? prevC.T : null;
   if (S && !T) {
     const sp = ph.positions[S];
     T = offs.filter((o) => o !== S).sort((a, b) => Math.hypot(ph.positions[a].x - sp.x, ph.positions[a].y - sp.y) - Math.hypot(ph.positions[b].x - sp.x, ph.positions[b].y - sp.y))[0] || null;
@@ -686,7 +687,7 @@ export function detectPnr(play, k, cfg) {
   const { results } = runEngine({ ...play, phases: play.phases.map((x, i) => (i === k ? { ...x, pnr: undefined } : x)) }, cfgFull(cfg), k);
   const assign = results[k].defInfo.assign || {};
   const defOf = (o) => Object.keys(assign).find((d) => assign[d] === o) || null;
-  return { S, T, dB: defOf(T), dS: defOf(S) };
+  return { S, T, dB: (prevC?.T === T && prevC?.dB) || defOf(T), dS: (prevC?.S === S && prevC?.dS) || defOf(S) };
 }
 
 export function applyPnr(play, k, cfg, which = ["B", "S"]) {
