@@ -12,7 +12,8 @@ import { EditorTopBar } from "@/components/editor/EditorTopBar";
 import { ExportVideoDialog } from "@/components/editor/ExportVideoDialog";
 import { DefensePanel } from "@/components/editor/DefensePanel";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { generateDefense, manualEdits, hasGenerated, DEFAULT_DEFENSE, liveDefensePhase } from "@/lib/defense";
+import { generateDefense, manualEdits, hasGenerated, DEFAULT_DEFENSE, liveDefensePhase, detectPnr, applyPnr } from "@/lib/defense";
+import { PnrDock, covTags } from "@/components/editor/PnrDock";
 import { LiveBar } from "@/components/editor/LiveBar";
 import { CompareDialog } from "@/components/editor/CompareDialog";
 import { PresentMode } from "@/components/editor/PresentMode";
@@ -38,6 +39,39 @@ function Editor({ play }) {
   const [genAsk, setGenAsk] = useState(null);
   const [compareOpen, setCompareOpen] = useState(false);
   const [presenting, setPresenting] = useState(false);
+  const [pnrOpen, setPnrOpen] = useState(false);
+  const setPnrPhase = (p, k, pnr) => ({ ...p, phases: p.phases.map((x, i) => (i === k ? (pnr ? { ...x, pnr } : (({ pnr: _, ...rest }) => rest)(x)) : x)) });
+  const applyCov = (p0, which) => {
+    const c = p0.phases[idx].pnr;
+    let p = p0;
+    which.forEach((r) => {
+      const d = r === "B" ? c?.dB : c?.dS;
+      if (d && p.phases[idx].locked?.[d]) p = M.setLock(p, idx, d, false);
+    });
+    return p.defense?.live ? react(p) : applyPnr(p, idx, cfgOf(p), which);
+  };
+  const pnrOps = {
+    onDetect: () => {
+      const p = playRef.current;
+      const det = detectPnr(p, idx, cfgOf(p));
+      commit(applyCov(setPnrPhase(p, idx, { ...det, aB: "over", aS: "show" }), ["B", "S"]));
+      toast(det.S ? "Blocco rilevato: scegli le coperture dei due difensori" : "Nessun blocco disegnato: scegli bloccante e palleggiatore", { duration: 1800 });
+    },
+    onSet: (patch, which = ["B", "S"]) => {
+      const p = playRef.current;
+      let next = { ...p.phases[idx].pnr, ...patch };
+      if (patch.S || patch.T) {
+        const det = detectPnr(setPnrPhase(p, idx, null), idx, cfgOf(p));
+        const assign = p.phases[idx].defInfo?.assign;
+        const defOf = (o) => (assign && Object.keys(assign).find((d) => assign[d] === o)) || (o === det.T ? det.dB : o === det.S ? det.dS : null);
+        if (patch.T) next.dB = defOf(patch.T) || next.dB;
+        if (patch.S) next.dS = defOf(patch.S) || next.dS;
+      }
+      commit(applyCov(setPnrPhase(p, idx, next), which));
+    },
+    onReapply: () => commit(applyPnr(playRef.current, idx, cfgOf(playRef.current))),
+    onRemove: () => commit(setPnrPhase(playRef.current, idx, null)),
+  };
   const canvasRef = useRef(null);
   const progressRef = useRef(null);
   const tRef = useRef(0);
@@ -303,11 +337,12 @@ function Editor({ play }) {
     () => ({
       selectedId: sel?.kind === "player" ? sel.id : null, selectedDrawingId: sel?.kind === "drawing" ? sel.id : null, ghost, size: settings.playerSize,
       locked: play.phases[idx]?.locked,
+      tags: covTags(play.phases[idx]),
       mismatch: Object.fromEntries((play.phases[idx]?.defInfo?.mismatches || []).map((m) => [m.d, m.kind])),
       smooth: liveOn ? { ids: play.players.filter((p) => p.team === "D").map((p) => p.id), tau: 0.18 + 0.5 * (play.defense?.params?.reaction ?? 0.3), preview: play.defense?.preview !== false } : null,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sel, ghost, settings.playerSize, play.phases[idx]?.locked, play.phases[idx]?.defInfo, liveOn, play.players, play.defense?.params?.reaction, play.defense?.preview],
+    [sel, ghost, settings.playerSize, play.phases[idx]?.locked, play.phases[idx]?.defInfo, play.phases[idx]?.pnr, liveOn, play.players, play.defense?.params?.reaction, play.defense?.preview],
   );
   const selPlayer = sel?.kind === "player" ? play.players.find((p) => p.id === sel.id) : null;
   const selDrawing = sel?.kind === "drawing" ? M.findDrawing(play, sel.id) : null;
@@ -363,6 +398,8 @@ function Editor({ play }) {
           exitPlayback();
           setDefOpen(true);
         }}
+        pnrOpen={pnrOpen}
+        onPnr={() => setPnrOpen((o) => !o)}
       />
       <div className="flex-1 min-h-0 flex flex-col landscape:flex-row">
         <div className="relative flex-1 min-h-0 min-w-0 order-1 landscape:order-2" data-testid="court-area">
@@ -411,6 +448,19 @@ function Editor({ play }) {
         <div className="order-2 landscape:order-1 min-h-0 min-w-0 flex">
           <Toolbar tool={tool} setTool={setTool} />
         </div>
+        {pnrOpen && !playing && (
+          <PnrDock
+            play={play}
+            idx={idx}
+            onClose={() => setPnrOpen(false)}
+            onPrev={() => goPhase(idx - 1)}
+            onNext={() => goPhase(idx + 1)}
+            onAdd={addPhase}
+            onDuplicate={phaseOps.onDuplicate}
+            onGo={goPhase}
+            {...pnrOps}
+          />
+        )}
       </div>
       <Timeline
         phases={play.phases}

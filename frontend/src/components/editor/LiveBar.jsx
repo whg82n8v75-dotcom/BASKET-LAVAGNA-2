@@ -1,10 +1,10 @@
-import { Radio, RotateCcw, SlidersHorizontal, CheckCheck, Unlock } from "lucide-react";
+import { Radio, RotateCcw, SlidersHorizontal, CheckCheck, Unlock, Blocks } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { MODES } from "@/lib/defense";
 
 const SHORT = { man: "Uomo", zone23: "2-3", zone32: "3-2" };
 
-export function LiveBar({ play, phaseIndex, onToggle, onMode, onReset, onUnlockAll, onConfirm, onParams }) {
+export function LiveBar({ play, phaseIndex, onToggle, onMode, onReset, onUnlockAll, onConfirm, onParams, pnrOpen, onPnr }) {
   const on = !!play.defense?.live;
   const mode = play.defense?.mode || "man";
   const locks = Object.keys(play.phases[phaseIndex]?.locked || {}).length;
@@ -27,7 +27,8 @@ export function LiveBar({ play, phaseIndex, onToggle, onMode, onReset, onUnlockA
           <button data-testid="live-confirm-phase-btn" onClick={onConfirm} title="Registra la fase e crea la successiva" className="h-8 px-2.5 rounded-full text-xs font-semibold bg-emerald-600 text-white flex items-center gap-1 shrink-0"><CheckCheck className="w-3.5 h-3.5" />Conferma fase</button>
         </>
       )}
-      <button data-testid="live-params-btn" onClick={onParams} title="Parametri difensivi" className="h-8 w-8 rounded-full grid place-items-center border border-[#334155] shrink-0 hover:bg-[#1A263D] ml-auto"><SlidersHorizontal className="w-3.5 h-3.5" /></button>
+      <button data-testid="pnr-toggle-btn" onClick={onPnr} title="Coperture sul blocco frame per frame" className={`h-8 px-2.5 rounded-full text-xs font-semibold flex items-center gap-1 shrink-0 border ml-auto ${pnrOpen ? "bg-blue-600 border-blue-500 text-white" : "border-[#334155] hover:bg-[#1A263D]"}`}><Blocks className="w-3.5 h-3.5" />Blocco P&R</button>
+      <button data-testid="live-params-btn" onClick={onParams} title="Parametri difensivi" className="h-8 w-8 rounded-full grid place-items-center border border-[#334155] shrink-0 hover:bg-[#1A263D]"><SlidersHorizontal className="w-3.5 h-3.5" /></button>
     </div>
   );
 }

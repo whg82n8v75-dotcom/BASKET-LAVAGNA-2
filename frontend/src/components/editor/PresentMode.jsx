@@ -3,6 +3,7 @@ import { Play, Pause, RotateCcw, ChevronLeft, ChevronRight, X, MessageSquareText
 import { makeView } from "@/lib/court";
 import { drawScene } from "@/lib/render";
 import { buildTimeline, frameAt, holdStart } from "@/lib/engine";
+import { covTags } from "@/components/editor/PnrDock";
 
 const SPEEDS = [0.5, 0.75, 1, 1.5];
 const mmOf = (play, i) => Object.fromEntries((play.phases[i]?.defInfo?.mismatches || []).map((m) => [m.d, m.kind]));
@@ -56,7 +57,7 @@ export function PresentMode({ play, startPhase = 0, playerSize = 1, onClose }) {
       c.height = Math.round(view.h * view.dpr);
     }
     const fr = frameAt(play, tl, Math.min(tRef.current, tl.total - 1e-4), true);
-    drawScene(c.getContext("2d"), view, play, fr, { size: playerSize * 1.15, mismatch: mmOf(play, fr.phaseIndex) });
+    drawScene(c.getContext("2d"), view, play, fr, { size: playerSize * 1.15, mismatch: mmOf(play, fr.phaseIndex), tags: covTags(play.phases[fr.phaseIndex]) });
     setPhase(fr.phaseIndex);
   }, [view, play, tl, playerSize]);
 

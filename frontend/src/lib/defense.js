@@ -389,7 +389,7 @@ function zoneBase(mode, ball, info, prm, offN) {
   if (mode === "zone23") {
     const top = {
       gL: P(ball.lat - 1.9 * w, clamp(bd - 1.5, topDep - 0.6, topDep + 0.8)), gR: P(ball.lat + 1.9 * w, clamp(bd - 1.5, topDep - 0.6, topDep + 0.8)),
-      wL: P(-3.6 * w, 2.7), wR: P(3.6 * w, 2.7), c: P(ball.lat * 0.15, highPost ? 3.8 : 2.3),
+      wL: P(-3.6 * w, 2.7), wR: P(3.6 * w, 2.7), c: P(ball.lat * 0.15, highPost ? 3.8 : 2.9),
     };
     const sideF = { gS: ballG, gW: S(P(0.7, topDep - 1.1)), wS: S(P((cornerOcc ? 5.0 : 4.3) * w, 2.5)), c: S(P(1.9, 2.0)), wW: S(P(-weakLat * w, 2.0)) };
     const cornerF = { wS: onBall(ball, prm), c: S(P(2.6, 1.6)), gS: S(P(4.0, 4.8)), gW: S(P(0.8, 5.0)), wW: S(P(-0.8, 1.8)) };
@@ -461,6 +461,11 @@ function runEngine(play, cfg, upto = play.phases.length - 1, sticky = null) {
     const ballN = holder ? fr.toN(ph.positions[holder]) : fr.toN({ x: ph.ball?.x ?? 7, y: ph.ball?.y ?? 7.5 });
     const info = readBall(ballN);
     const ev = detectEvents(play, k, fr, state.prevScreens);
+    const pnr = pnrValid(play, ph);
+    if (pnr) {
+      ev.screensSet = ev.screensSet.filter((sc) => sc.S !== pnr.S);
+      ev.screensUse = ev.screensUse.filter((sc) => sc.S !== pnr.S);
+    }
     if (holder && (info.zone === "paint" || info.zone === "rim")) ev.penetration = true;
     const evNotes = [];
     if (ev.pass) evNotes.push(`passaggio ${short(play, ev.pass.from)}→${short(play, ev.pass.to)}`);
@@ -492,7 +497,15 @@ function runEngine(play, cfg, upto = play.phases.length - 1, sticky = null) {
       if (nearest && !(info.zone === "top" && info.side === 0 && cfg.mode === "zone23")) notes.push(`Sulla palla: ${short(play, nearest)} (${ROLE_LABELS[cfg.mode][roles[nearest]]})`);
       Object.entries(roles).forEach(([d, r]) => notes.push(`${short(play, d)}: ${ROLE_LABELS[cfg.mode][r]}`));
     }
+    if (pnr) {
+      const T = fr.toN(ph.positions[pnr.T]), S = fr.toN(ph.positions[pnr.S]);
+      [["B", pnr.dB, pnr.aB], ["S", pnr.dS, pnr.aS]].forEach(([role, d, a]) => {
+        outN[d] = a === "manual" ? fr.toN(ph.positions[d]) : pnrSpot(role, a, T, S, prm);
+        notes.push(`${short(play, d)} (${role === "B" ? "sulla palla" : "sul bloccante"}): ${COVERAGES[a]} — ${COV_DESC[role][a]}`);
+      });
+    }
     separate(outN, cfg.mode === "man" ? 1.0 : 1.4);
+    if (pnr) [[pnr.dB, pnr.aB], [pnr.dS, pnr.aS]].forEach(([d, a]) => a === "manual" && (outN[d] = fr.toN(ph.positions[d])));
     const mismatches = [];
     if (cfg.mode === "man")
       Object.entries(state.assign).forEach(([d, o]) => {
@@ -514,7 +527,7 @@ function runEngine(play, cfg, upto = play.phases.length - 1, sticky = null) {
     state.prevScreens = ev.screensSet;
     const gen = {};
     Object.entries(outN).forEach(([d, n]) => (gen[d] = fr.fromN(n)));
-    const defInfo = { zone: info.zone, side: info.side, events: evNotes, notes, helpers, mismatches, mode: cfg.mode, label: `${ZONE_LABELS[info.zone]}${info.side ? ` · lato forte ${sideLabel(info.side)}` : ""}` };
+    const defInfo = { zone: info.zone, side: info.side, events: evNotes, notes, helpers, mismatches, assign: { ...state.assign }, mode: cfg.mode, label: `${ZONE_LABELS[info.zone]}${info.side ? ` · lato forte ${sideLabel(info.side)}` : ""}` };
     results.push({ gen, defInfo });
   }
   return { results, prm, defsP };
@@ -600,3 +613,96 @@ export function zoneRoleMap(play, mode, cfg = {}) {
   return map;
 }
 export { ROLE_ORDER };
+
+export const COVERAGES = { over: "Over", under: "Under", switch: "Switch", show: "Show/Hedge", trap: "Trap/Blitz", drop: "Drop", ice: "ICE/Down", contain: "Contenimento", recover: "Recupero e rientro", manual: "Movimento manuale" };
+const COV_DESC = {
+  B: {
+    over: "passa sopra il blocco, attaccato all'anca del palleggiatore", under: "passa sotto il blocco, tra bloccante e canestro", switch: "cambia e prende il bloccante",
+    show: "sale aggressivo sul lato del blocco", trap: "raddoppia il palleggiatore insieme al lungo", drop: "arretra e concede il tiro dal palleggio", ice: "si mette sul lato del blocco e spinge lontano dal blocco",
+    contain: "contiene a distanza tra palla e canestro", recover: "rientra sul proprio uomo (palleggiatore)", manual: "posizione decisa dall'allenatore",
+  },
+  S: {
+    over: "sale al livello del blocco, sopra il bloccante", under: "si stacca sotto il bloccante per far passare il compagno", switch: "cambia e prende il palleggiatore",
+    show: "esce davanti alla palla per rallentarla", trap: "esce in raddoppio sul palleggiatore", drop: "arretra in area tra palla e ferro", ice: "scende verso il fondo sul lato in cui viene spinta la palla",
+    contain: "contenimento morbido a metà strada tra palla e rollante", recover: "rientra sul bloccante, tra lui e il canestro", manual: "posizione decisa dall'allenatore",
+  },
+};
+export { COV_DESC };
+
+function pnrSpot(role, a, T, S, prm) {
+  const g = norm(sub(S, T));
+  const up = (x) => norm(sub(x, HOOP));
+  const toH = (x) => norm(sub(HOOP, x));
+  if (role === "B") {
+    switch (a) {
+      case "over": return add(mix(T, S, 0.35), mul(up(T), 0.35));
+      case "under": return add(S, mul(toH(S), 2.0));
+      case "switch": return toward(S, HOOP, 0.9);
+      case "show": return add(T, add(mul(g, 0.55), mul(up(T), 0.25)));
+      case "trap": return add(T, mul(g, 0.85));
+      case "drop": return toward(T, HOOP, 2.4);
+      case "ice": return add(T, add(mul(g, 0.8), mul(toH(T), 0.2)));
+      case "contain": return onBall(T, prm, 0.5);
+      default: return onBall(T, prm);
+    }
+  }
+  switch (a) {
+    case "over": return add(S, add(mul(up(S), 0.6), mul(g, -0.4)));
+    case "under": return add(S, mul(toH(S), 0.9));
+    case "switch": return onBall(T, prm);
+    case "show": return hoopDist(T) > hoopDist(S) + 0.3 ? add(S, add(mul(g, 0.8), mul(up(S), 0.6))) : add(toward(T, HOOP, 0.9), mul(norm(sub(T, S)), 0.5));
+    case "trap": return add(T, mul(norm(sub(toH(T), mul(g, 0.6))), 0.9));
+    case "drop": return mix(mix(T, HOOP, 0.55), S, 0.25);
+    case "ice": {
+      const sg = Math.abs(g.lat) > 0.3 ? -Math.sign(g.lat) : Math.sign(T.lat) || 1;
+      return P(clamp(T.lat + sg * 0.6, -5, 5), clamp(T.dep - 3.0, 2.0, 4.6));
+    }
+    case "contain": return mix(toward(T, HOOP, 2.0), S, 0.3);
+    default: return toward(S, HOOP, 1.0);
+  }
+}
+
+function pnrValid(play, ph) {
+  const c = ph.pnr;
+  if (!c || !c.S || !c.T || !c.dB || !c.dS || c.dB === c.dS || c.S === c.T) return null;
+  if (![c.S, c.T, c.dB, c.dS].every((id) => ph.positions[id] && play.players.some((p) => p.id === id))) return null;
+  return { ...c, aB: COVERAGES[c.aB] ? c.aB : "over", aS: COVERAGES[c.aS] ? c.aS : "show" };
+}
+
+const cfgFull = (cfg) => ({ ...DEFAULT_DEFENSE, ...(cfg || {}), params: { ...DEFAULT_DEFENSE.params, ...(cfg?.params || {}) } });
+
+export function detectPnr(play, k, cfg) {
+  const ph = play.phases[k];
+  const offs = play.players.filter((p) => p.team === "O" && ph.positions[p.id]).map((p) => p.id);
+  const draws = [...ph.drawings, ...(play.phases[k - 1]?.drawings || [])];
+  const scr = draws.find((d) => d.type === "screen" && offs.includes(d.playerId));
+  const holder = ph.ball?.holder;
+  const S = scr?.playerId || null;
+  let T = holder && holder !== S ? holder : null;
+  if (S && !T) {
+    const sp = ph.positions[S];
+    T = offs.filter((o) => o !== S).sort((a, b) => Math.hypot(ph.positions[a].x - sp.x, ph.positions[a].y - sp.y) - Math.hypot(ph.positions[b].x - sp.x, ph.positions[b].y - sp.y))[0] || null;
+  }
+  const { results } = runEngine({ ...play, phases: play.phases.map((x, i) => (i === k ? { ...x, pnr: undefined } : x)) }, cfgFull(cfg), k);
+  const assign = results[k].defInfo.assign || {};
+  const defOf = (o) => Object.keys(assign).find((d) => assign[d] === o) || null;
+  return { S, T, dB: defOf(T), dS: defOf(S) };
+}
+
+export function applyPnr(play, k, cfg, which = ["B", "S"]) {
+  const ph = play.phases[k];
+  const c = pnrValid(play, ph);
+  if (!c) return play;
+  const { results } = runEngine(play, cfgFull(cfg), k);
+  const { gen, defInfo } = results[k];
+  const positions = { ...ph.positions };
+  const defGen = { ...(ph.defGen || {}) };
+  which.forEach((r) => {
+    const d = r === "B" ? c.dB : c.dS;
+    if (gen[d] && !ph.locked?.[d]) {
+      positions[d] = gen[d];
+      defGen[d] = gen[d];
+    }
+  });
+  return { ...play, phases: play.phases.map((x, i) => (i === k ? { ...ph, positions, defGen, defInfo } : x)) };
+}
