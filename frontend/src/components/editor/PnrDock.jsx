@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { X, ChevronLeft, ChevronRight, Plus, Copy, ScanSearch, RotateCcw, Trash2 } from "lucide-react";
-import { COVERAGES, COV_DESC, OFF_KINDS, OFF_COV, OFF_DESC, OFF_SHORT, EXITS } from "@/lib/defense";
+import { COVERAGES, COV_DESC, OFF_KINDS, OFF_COV, OFF_DESC, OFF_SHORT, EXITS, REACT_DESC } from "@/lib/defense";
 
 const SHORT = { stuck: "STAMPATO", over: "OVER", under: "UNDER", switch: "SWITCH", show: "SHOW", trap: "TRAP", drop: "DROP", ice: "ICE", contain: "CONTIENI", recover: "RECUPERO", manual: "MANUALE" };
 export const covTags = (ph) => {
@@ -69,7 +69,7 @@ function OffScreen({ play, o, i, offs, defs, onSet, onReapply, onRemove }) {
         <Pick label="Difensore del bloccante" testid={`${t}-screen-def`} value={o.dS} options={defs} play={play} onChange={(dS) => onSet({ dS })} />
       </div>
       {(!o.S || !o.C || !o.dC || !o.dS) && <p className="text-xs text-amber-300">Completa i quattro giocatori per applicare le coperture.</p>}
-      <CovGroup prefix={t} title={`${lab(play, o.dC)} · sul tagliatore`} role="cutter" value={o.aC} options={OFF_COV.C} desc={OFF_DESC.C} onPick={(aC) => (aC === "stuck" ? onSet({ aC, aS: "stay" }, [o.dC, o.dS]) : onSet({ aC }, [o.dC]))} />
+      <CovGroup prefix={t} title={`${lab(play, o.dC)} · sul tagliatore`} role="cutter" value={o.aC} options={OFF_COV.C} desc={{ ...OFF_DESC.C, react: `${EXITS[o.exit || "auto"]} → ${REACT_DESC[o.exit || "auto"]}` }} onPick={(aC) => (aC === "stuck" ? onSet({ aC, aS: "stay" }, [o.dC, o.dS]) : onSet({ aC }, [o.dC]))} />
       <CovGroup prefix={t} title={`${lab(play, o.dS)} · sul bloccante`} role="screen" value={o.aS} options={OFF_COV.S} desc={OFF_DESC.S} onPick={(aS) => onSet({ aS }, [o.dS])} />
       <div className="grid grid-cols-2 gap-1.5">
         <button data-testid={`${t}-reapply`} onClick={onReapply} className="h-9 rounded-full border border-[#334155] text-xs font-semibold flex items-center justify-center gap-1 hover:bg-[#1A263D]"><RotateCcw className="w-3.5 h-3.5" />Riapplica</button>

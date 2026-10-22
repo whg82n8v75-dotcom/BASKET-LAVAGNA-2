@@ -25,6 +25,8 @@ PWA in italiano per allenatori di basket: lavagna tattica animata (fasi/timeline
 
 - 2026-06 v9: Blocchi lontano dalla palla frame by frame (phase.offScreens, max 3: pin-down, flare, back, cross, altro; 7 coperture per il difensore del tagliatore e 7 per quello del bloccante; rilevamento automatico e tipo dedotto).
 
+- 2026-06 v10: letture del tagliatore (dritta/curl/fade/backdoor) con copertura 'Legge l'uscita'; 'Si stampa sul blocco' (difensore fermo alla posizione del frame precedente, difensore del bloccante resta sul bloccante) per blocchi lontano e sulla palla.
+
 ## Limiti dichiarati
 - Pressing a tutto campo non gestito dal motore (preset manuale). GIF non disponibile.
 - Zone: nessun raddoppio/trap esplicito; ruoli zona assegnati per numero.

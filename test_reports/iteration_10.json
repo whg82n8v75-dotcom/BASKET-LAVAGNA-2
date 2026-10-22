@@ -1,0 +1,27 @@
+{
+  "summary": "Frontend-only test of the cutter exit reads and the 'Si stampa sul blocco' coverage, run on desktop 1920x1080 in 3 Playwright runs, with positions checked in localStorage btm.plays.v1. All requested items pass and there were no page or console errors. (1) Pindown preset, Fase 2, off-add: row off-0-exit has 4 buttons (Dritta/Curl/Fade/Backdoor) with auto selected, and the chips off-0-cutter-react ('Legge l'uscita') and off-0-cutter-stuck ('Si stampa sul blocco') are present. (2) With react selected, the four exits give 4 different D2 positions: auto (2.196,5.393) [same as trail], curl (2.748,3.897), fade (2.921,4.096), backdoor (1.936,6.055). offScreens[0].exit is stored each time. The defense notes include the exit, e.g. 'D2 (sul tagliatore, Pin-down · Backdoor): Legge l'uscita — Backdoor → si gira e chiude la linea verso il ferro'. pnr-seq-1 shows 'Pin-down (Curl)/(Fade)/(Backdoor)', and no suffix for auto. (3) cutter-stuck: aC=stuck, aS=stay, D2 F2 is (2.036,5.92), exactly its Fase 1 position. D4 stays at (3.56,5.10), about 0.93 from the screener A4. off-0-screen-stay is highlighted and STAMPATO is drawn on the canvas. (4) On-ball, test-pnr-over, Fase 2, pnr-detect, pnr-ball-stuck: aB=stuck, aS=recover, pnr-screen-recover is highlighted, D1 F2 (8.19,7.5) equals F1, and D5 is exactly 1.0 from A5. STAMPATO/RECUPERO tags are drawn. (5) Reload keeps the state (deep-equal). Regression: over/under/switch/drop still give distinct D1 positions, and playback runs with tags and no errors.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "OffScreen cutter description", "issue": "With 'Legge l'uscita' selected, off-0-desc-cutter always shows the generic 'reagisce alla lettura del tagliatore' and does not change with the exit. Only the defense notes show the exit-specific text from REACT_DESC. Suggest showing `${EXITS[exit]} → ${REACT_DESC[exit]}` in the desc when aC==='react'.", "selector": "[data-testid=off-0-desc-cutter]", "priority": "LOW"},
+      {"component": "Stuck side effect", "issue": "Picking stuck forces aS to stay (off-ball) or recover (on-ball). When the user then switches the ball or cutter coverage back to e.g. over, aS stays recover/stay instead of the previous value (show). This may be intended, but it can surprise users.", "selector": "[data-testid=pnr-ball-over]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional: make off-N-desc-cutter show the exit-specific REACT_DESC text when aC is 'react'"
+  ],
+  "critical_code_review_comments": [
+    "defense.js: the stuck position is set by fixed() after separate(), but the push-away loop (lines 535-540, which keeps defenders at least 0.8 from any offensive player) runs after it. If an offensive player moves into the defender's previous spot, the 'stuck' defender gets moved, so the 'exact previous position' guarantee is not absolute.",
+    "REACT maps auto and curl both to 'trail'. They differ only through readExit's direction, which is fine.",
+    "defense.js is now 829 lines, above the 700-line guideline. Move the off-ball code (OFF_*, EXITS, REACT, readExit, offSpot, detectOffScreen) into lib/offscreen.js."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "None. Plays were created from presets in browser localStorage only.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Pindown F2 react positions for D2: auto (2.196,5.393), curl (2.748,3.897), fade (2.921,4.096), backdoor (1.936,6.055). Stuck D2 equals F1 (2.036,5.92). test-pnr-over F2 stuck: D1 (8.19,7.5) equals F1, and D5 with recover is 1.0 from A5. The localStorage btm.plays.v1 value is an array of plays. The play button testid is timeline-play."
+}

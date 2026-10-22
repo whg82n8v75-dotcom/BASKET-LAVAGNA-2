@@ -745,7 +745,7 @@ export const OFF_SHORT = { react: "LEGGE", stuck: "STAMPATO", trail: "TRAIL", to
 
 export const EXITS = { auto: "Uscita dritta", curl: "Curl", fade: "Fade", backdoor: "Backdoor" };
 const REACT = { auto: "trail", curl: "trail", fade: "under", backdoor: "backdoor" };
-const REACT_DESC = {
+export const REACT_DESC = {
   auto: "insegue attaccato (trail)", curl: "insegue stretto all'interno del curl, il compagno aiuta sul ferro",
   fade: "taglia sotto il blocco verso la zona del fade per contestare il tiro", backdoor: "si gira e chiude la linea verso il ferro",
 };
