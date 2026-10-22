@@ -1,0 +1,30 @@
+{
+  "summary": "Frontend-only test of the OFF-BALL screens part of the P&R dock (pnr-tab-off). I ran 6 Playwright runs on desktop 1920x1080 and iPhone 390x844, reading localStorage btm.plays.v1 to check positions. Everything requested works and there were no page errors. (1) Pindown preset, Frase 2: off-add detects Pin-down A4/A2/D2/D4 with Trail/Resta; a second off-add detects A5/A3/D3/D5. The tab label shows (2). (2) Each of the 7 cutter chips and 7 screener chips moves only that defender in phases[1], with no other defender or frame changed. Manual keeps the position, and the description text updates. (3) The kind select (pin/flare/back/cross/other) gives a different D2/D4 position for toplock/bump each time, and switching back to pin restores the original values. (4) After a manual drag, reapply restores the exact computed position, undo returns to the dragged position and redo works. Remove takes the screen out without moving anyone. (5) pnr-add-frame copies both offScreens to the new frame. Editing the new frame (deny, help) leaves F2 unchanged, and pnr-sequence shows 'Pin-down: D2 Top lock · D4 Resta sul bloccante | Pin-down: D3 ...'. (6) Reload keeps the state (deep-equal). During playback TOP LOCK/RESTA/TRAIL tags are drawn once the editor reaches Fase 2. Present mode (with requestFullscreen stubbed) shows TOP LOCK/RESTA/TRAIL/BUMP. (7) Regression on test-pnr-over, Fase 2: pnr-detect gives S=A5 T=A1 dB=D1 dS=D5 over/show, D1 (9.31,8.3) and D5 (8.27,9.2), same as iteration 8. An off-ball screen added in the same frame does not touch D1/D5, the pnr coverage does not touch D2/D4, and the sequence lists both. (8) On iPhone the dock sits below the court (y=364, height 354), both tabs are visible at 180px each, all chips are reachable by scrolling, and there is no horizontal overflow.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "OffScreen manual selection", "issue": "If off-add finds no drawn screen (e.g. test-pnr-over), kind is set to 'other' with S/C null. After the user picks screener and cutter by hand, kind stays 'Altro blocco' and guessKind is not run again, so pin/flare/back are not inferred. Suggest re-running guessKind in offOps.onSet when patch.S or patch.C is set and the kind is still 'other'.", "selector": "[data-testid=off-0-kind]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Editor iPhone 390x844 with dock open", "issues": ["The court shrinks to about 390x209, so tags (TOP LOCK, BUMP, RESTA) overlap players and each other in pin-down/stagger setups and are hard to read."]},
+      {"screen": "Editor playback", "issues": ["Tags appear only once the editor phase index changes (they come from play.phases[idx]), so during the transition into Fase 2 there are no tags and then they pop in. During the next transition the tags travel with the defenders and can be hidden behind other players (TRAIL under D3 was covered by D5). This is cosmetic."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional: when the user selects screener and cutter by hand, re-run guessKind if kind is 'other'",
+    "Optional: reduce tag overlap on small courts (mobile), e.g. smaller tag font or offset tags away from nearby players"
+  ],
+  "critical_code_review_comments": [
+    "model.newPhaseFrom copies offScreens with the same id into the new frame. This is harmless now because ids are only used as React keys inside a frame, but it will collide if ids are ever used across frames.",
+    "detectOffScreen picks the cutter as the closest offensive player to the screener, excluding the holder. It does not exclude players who are already cutters in another offScreen in the same frame, so a stagger with the same cutter may need manual correction.",
+    "Editor.jsx is 562 lines and defense.js is 807 lines, which is above the 700-line guideline. Consider moving the OFF_* coverage code (OFF_COV, offSpot, exitDir, offValid, detectOffScreen) into lib/offscreen.js."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "None. Plays were created from presets in browser localStorage only.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Pindown preset (preset-open-pindown), Fase 2 (phase-chip-1): off-add gives pin A4/A2/D2/D4, a second off-add gives A5/A3/D3/D5. D positions in phase 1: trail D2 (2.2,5.39), toplock D2 (2.69,3.68), stay D4 (3.56,5.1), bump D4 (4.49,3.29) with kind pin. For flare, toplock D2 is (2.63,3.66) and bump D4 is (4.42,3.26). pnr-add-frame inserts after the current frame (Frame 3/5). Each browser_automation run is a fresh context, so recreate the play from the preset each time. In test-pnr-over the off-add in Fase 2 finds no drawn off-ball screen and returns nulls with kind other; pick A4/A2 by hand to get D2/D4."
+}

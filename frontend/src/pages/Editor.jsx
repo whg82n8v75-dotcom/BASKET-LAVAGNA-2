@@ -12,7 +12,7 @@ import { EditorTopBar } from "@/components/editor/EditorTopBar";
 import { ExportVideoDialog } from "@/components/editor/ExportVideoDialog";
 import { DefensePanel } from "@/components/editor/DefensePanel";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { generateDefense, manualEdits, hasGenerated, DEFAULT_DEFENSE, liveDefensePhase, detectPnr, applyPnr, detectOffScreen, OFF_KINDS } from "@/lib/defense";
+import { generateDefense, manualEdits, hasGenerated, DEFAULT_DEFENSE, liveDefensePhase, detectPnr, applyPnr, detectOffScreen, OFF_KINDS, guessKind, courtFrame } from "@/lib/defense";
 import { PnrDock, covTags } from "@/components/editor/PnrDock";
 import { LiveBar } from "@/components/editor/LiveBar";
 import { CompareDialog } from "@/components/editor/CompareDialog";
@@ -95,6 +95,12 @@ function Editor({ play }) {
       const defOf = (o) => Object.keys(assign).find((d) => assign[d] === o);
       if (patch.C) next.dC = defOf(patch.C) || next.dC;
       if (patch.S) next.dS = defOf(patch.S) || next.dS;
+      const ph = p.phases[idx];
+      if ((patch.S || patch.C) && (next.kind || "other") === "other" && next.S && next.C && ph.positions[next.S] && ph.positions[next.C]) {
+        const fr = courtFrame(p);
+        const h = ph.ball?.holder && ph.positions[ph.ball.holder] ? ph.positions[ph.ball.holder] : { x: ph.ball?.x ?? 7, y: ph.ball?.y ?? 7.5 };
+        next.kind = guessKind(fr.toN(ph.positions[next.C]), fr.toN(ph.positions[next.S]), fr.toN(h));
+      }
       list[i] = next;
       commit(applyIds(setOff(p, list), ids || [next.dC, next.dS]));
     },

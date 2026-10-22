@@ -23,6 +23,8 @@ PWA in italiano per allenatori di basket: lavagna tattica animata (fasi/timeline
 
 - 2026-06 v8: Coperture P&R frame by frame (PnrDock, phase.pnr {S,T,dB,dS,aB,aS}; 10 coperture per difensore indipendenti; tag sul campo, sequenza coperture, rileva/riapplica/togli; nuovi frame copiano la copertura). MODIFICA 1: centro zona 2-3 in partenza a 4,4 m dalla linea di fondo (appena dentro la lunetta).
 
+- 2026-06 v9: Blocchi lontano dalla palla frame by frame (phase.offScreens, max 3: pin-down, flare, back, cross, altro; 7 coperture per il difensore del tagliatore e 7 per quello del bloccante; rilevamento automatico e tipo dedotto).
+
 ## Limiti dichiarati
 - Pressing a tutto campo non gestito dal motore (preset manuale). GIF non disponibile.
 - Zone: nessun raddoppio/trap esplicito; ruoli zona assegnati per numero.
